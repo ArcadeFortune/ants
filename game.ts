@@ -1,6 +1,9 @@
-import { Ant } from "./ant.ts";
-import { Board, Hive, TileType, Direction, ServerMessage } from "./types.ts";
+import { ServerMessage } from "./types/comms.ts";
+import { Hive, IHive } from "./types/hive.ts";
+import { Ant } from "./types/ant.ts";
+import { Tile, TileType } from "./types/tile.ts";
 import { getDirectionDelta, isWithinDistance, getNearbyTiles, findRandomEmptyPosition, generateUUID } from "./utils.ts";
+import { Board, Direction } from "./types/general.ts";
 
 export class Game {
   board: Board;
@@ -9,32 +12,28 @@ export class Game {
     this.board = {
       width: 200,
       height: 200,
-      tiles: Array(200).fill(null).map(() => Array(200).fill({ type: TileType.Empty })),
+      tiles: Array(200).fill(null).map(() => Array(200).fill(new Tile())),
       hives: new Map(),
     };
     // Initialize some food and walls randomly
     for (let y = 0; y < 200; y++) {
       for (let x = 0; x < 200; x++) {
         const rand = Math.random();
+        const tile = this.board.tiles[y][x];
         if (rand < 0.05) {
-          this.board.tiles[y][x] = { type: TileType.Wall };
+          tile.setType(TileType.Wall);
         } else if (rand < 0.15) {
-          this.board.tiles[y][x] = { type: TileType.Food };
+          tile.setType(TileType.Food);
         }
       }
     }
   }
 
-  addHive(uuid: string = generateUUID()): Hive {
+  addHive(uuid: string = generateUUID()): IHive {
     const pos = findRandomEmptyPosition(this.board.tiles);
     if (!pos) throw new Error("No empty position for hive");
-    const hive: Hive = {
-      uuid,
-      x: pos.x,
-      y: pos.y,
-      ants: [new Ant(pos.x, pos.y), new Ant(pos.x, pos.y)],
-    };
-    this.board.tiles[pos.y][pos.x] = { type: TileType.Hive, uuid };
+    const hive = new Hive(uuid, pos.x, pos.y);
+    this.board.tiles[pos.y][pos.x].setType(TileType.Hive, hive);
     this.board.hives.set(uuid, hive);
     return hive;
   }
@@ -43,7 +42,7 @@ export class Game {
     const hive = this.board.hives.get(uuid);
     if (!hive) return;
     // Clear tile
-    this.board.tiles[hive.y][hive.x] = { type: TileType.Empty };
+    this.board.tiles[hive.y][hive.x].setType(TileType.Empty);
     this.board.hives.delete(uuid);
   }
 
@@ -63,10 +62,10 @@ export class Game {
     // If moving to food and not carrying, pick up
     if (tile.type === TileType.Food && !ant.carrying) {
       ant.carrying = true;
-      this.board.tiles[newY][newX] = { type: TileType.Empty };
+      this.board.tiles[newY][newX].setType(TileType.Empty);
     }
     // If moving to hive and carrying, drop and spawn new ant
-    if (tile.type === TileType.Hive && tile.uuid === uuid && ant.carrying) {
+    if (tile.type === TileType.Hive && tile.hive?.uuid === uuid && ant.carrying) {
       ant.carrying = false;
       // Spawn new ant at hive
       const newAntId = generateUUID();
@@ -89,7 +88,7 @@ export class Game {
   }
 
   checkCollisions() {
-    const allAnts: { ant: Ant; hive: Hive; }[] = [];
+    const allAnts: { ant: Ant; hive: IHive; }[] = [];
     for (const hive of this.board.hives.values()) {
       for (const ant of hive.ants) {
         allAnts.push({ ant, hive });
@@ -136,5 +135,23 @@ export class Game {
       ants,
       tiles,
     };
+  }
+
+  todecide() {
+    // idea 1:
+    // go through all tiles around ants
+    // filter to tiles that have not .beenSeen by that ant/hive
+    // send those tiles to each client
+
+    // idea 2:
+    // have tiles in vision be in a queue
+    // go through all tiles in queue
+    // send tiles in
+
+    // idea 3:
+    // have game.activeTiles
+    // spawning a hive, will append 25 tiles to hotTiles
+    // moving an ant will also append 25 but also remove 5 from previous position
+    // added and removed tiles will check for nearby clients having vision on it, and update accordingly
   }
 }

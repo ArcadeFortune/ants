@@ -1,5 +1,5 @@
 import { Game } from "./game.ts";
-import { ServerEvent } from "./types.ts";
+import { ServerEvent } from "./types/comms.ts";
 
 const port = 8080;
 const game = new Game();

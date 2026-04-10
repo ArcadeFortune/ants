@@ -1,4 +1,5 @@
-import { Position, Direction, Tile, TileType } from "./types.ts";
+import { Direction, Position } from "./types/general.ts";
+import { Tile, TileType } from "./types/tile.ts";
 
 export function getDirectionDelta(direction: Direction): Position {
   switch (direction) {
@@ -35,7 +36,7 @@ export function getNearbyTiles(board: Tile[][], antX: number, antY: number, radi
           type: tile.type,
           x,
           y,
-          uuid: tile.uuid,
+          uuid: tile.hive?.uuid,
         });
       }
     }
