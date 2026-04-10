@@ -8,6 +8,10 @@ export interface IHive {
   ants: IAnt[];
 }
 
+export interface IHiveDTO {
+  uuid: string;
+}
+
 export class Hive implements IHive {
   ants: IAnt[];
   constructor(public uuid: string = generateUUID(), public x: number, public y: number) {

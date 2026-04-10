@@ -1,5 +1,6 @@
 import { Direction } from "node:readline";
 import { IHive } from "./hive.ts";
+import { ITileDTO } from "./tile.ts";
 
 
 export interface ClientMessage {
@@ -22,21 +23,28 @@ interface ServerLeaveEvent {
   };
 }
 
-export type ServerEvent = ServerJoinEvent | ServerLeaveEvent | ServerMessage;
-
-export interface ServerMessage {
-  type: "update";
-  ants: {
-    id: string;
-    x: number;
-    y: number;
-    carrying: boolean;
-    cooldown: number;
-  }[];
-  tiles: {
-    type: string;
-    x: number;
-    y: number;
-    uuid?: string;
-  }[];
+interface ServerTilesEvent {
+  type: "tiles";
+  body: {
+    tiles: ITileDTO[];
+  };
 }
+
+export type ServerEvent = ServerJoinEvent | ServerLeaveEvent | ServerTilesEvent;
+
+// export interface ServerMessage {
+//   type: "update";
+//   ants: {
+//     id: string;
+//     x: number;
+//     y: number;
+//     carrying: boolean;
+//     cooldown: number;
+//   }[];
+//   tiles: {
+//     type: string;
+//     x: number;
+//     y: number;
+//     uuid?: string;
+//   }[];
+// }

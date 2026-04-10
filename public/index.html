@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+  </head>
+
+  <body>
+    <button type="button" onclick="connect()">connect to ws://localhost:8080</button>
+    <div class="history">
+
+    </div>
+    <script>
+      const history = document.querySelector(".history")
+      function connect() {
+        const ws = new WebSocket("ws://localhost:8080");
+        // ws.connect = (m) => history?.append(`<div>Connected!</div>`)
+        ws.onmessage = (m) => {
+          const box = document.createElement("div");
+          box.innerText = "Server:"
+          const pre = document.createElement("pre");
+          pre.innerHTML = JSON.stringify(JSON.parse(m.data), null, 2)
+          box.appendChild(pre);
+          history?.appendChild(box)
+        }
+      }
+    </script>
+  </body>
+
+</html>

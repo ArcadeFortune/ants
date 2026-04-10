@@ -6,9 +6,17 @@ const game = new Game();
 
 const clients = new Set<WebSocket>();
 
-Deno.serve({ port, onListen: () => console.log(`Server lsitening on ws://localhost:${port}`) }, (req) => {
-  if (req.headers.get("upgrade") != "websocket") {
-    return new Response(null, { status: 426 });
+Deno.serve({ port, onListen: () => console.log(`Server listening on ws://localhost:${port}`) }, async (req) => {
+  if (req.headers.get("upgrade") !== "websocket") {
+    try {
+      const url = new URL(req.url);
+      let filepath = decodeURIComponent(url.pathname);
+      if (filepath === "/" || filepath === "") filepath = "/index.html";
+      const file = await Deno.open("./public" + filepath, { read: true });
+      return new Response(file.readable);
+    } catch {
+      return new Response("Not found", { status: 404 });
+    }
   }
   const { socket, response } = Deno.upgradeWebSocket(req);
   const hive = game.addHive();
@@ -22,6 +30,12 @@ Deno.serve({ port, onListen: () => console.log(`Server lsitening on ws://localho
       }
     } satisfies ServerEvent)));
     clients.add(socket);
+    socket.send(JSON.stringify({
+      type: "tiles",
+      body: {
+        tiles: game.getTilesAround(hive.x, hive.y, hive)
+      }
+    } satisfies ServerEvent));
   });
   socket.addEventListener("message", (event) => {
     if (event.data === "ping") {
