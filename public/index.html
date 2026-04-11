@@ -5,26 +5,101 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+    <style>
+      pre {
+        margin: 0
+      }
+
+      .history {
+        display: flex;
+        flex-direction: column-reverse;
+
+        fieldset {
+          animation: newMessage 2s ease-out forwards;
+
+          &.error {
+            animation: newError 2s ease-out forwards;
+          }
+
+          legend {
+            animation: inherit;
+          }
+        }
+
+      }
+
+      @keyframes newMessage {
+        from {
+          background-color: #00ff7c;
+        }
+
+        to {
+          background-color: rgb(255, 255, 255);
+        }
+      }
+
+      @keyframes newError {
+        from {
+          background-color: #ff0000;
+        }
+
+        to {
+          background-color: rgb(255, 255, 255);
+        }
+      }
+    </style>
   </head>
 
   <body>
-    <button type="button" onclick="connect()">connect to ws://localhost:8080</button>
-    <div class="history">
+    <h2>Status</h2>
+    <div class="status"></div>
 
-    </div>
+    <h2>buttons</h2>
+    <button type="button" onclick="establishConnection()">connect</button>
+    <button type="button" onclick="send({type: 'ping'})">ping</button>
+    <button type="button" onclick="send({type: 'whoami'})">who am i</button>
+
+    <h2>history</h2>
+    <div class="history"></div>
     <script>
+      let ws;
       const history = document.querySelector(".history")
-      function connect() {
-        const ws = new WebSocket("ws://localhost:8080");
-        // ws.connect = (m) => history?.append(`<div>Connected!</div>`)
-        ws.onmessage = (m) => {
-          const box = document.createElement("div");
-          box.innerText = "Server:"
-          const pre = document.createElement("pre");
-          pre.innerHTML = JSON.stringify(JSON.parse(m.data), null, 2)
-          box.appendChild(pre);
-          history?.appendChild(box)
+      const status = document.querySelector(".status")
+      function establishConnection() {
+        status.innerHTML = "Establishing a connection..."
+        ws = new WebSocket("ws://localhost:8080");
+        ws.onopen = (m) => {
+          const message = document.createElement("div");
+          message.innerText = "Connected"
+          status.innerHTML = ""
+          status.appendChild(message)
         }
+        ws.onerror = (e) => {
+          const message = document.createElement("div");
+          message.innerText = "Error connecting to server"
+          const tryagain = document.createElement("button");
+          tryagain.innerText = "Try again"
+          tryagain.onclick = () => { status.innerHTML = ""; establishConnection(); }
+          status?.appendChild(message)
+          status?.appendChild(tryagain)
+        }
+        ws.onmessage = (m) => newEvent(m.data, "Server")
+      }
+      function newEvent(message, source = "server") {
+        if (typeof message === "string") message = JSON.parse(message);
+        const box = document.createElement("fieldset");
+        if (message.type === "error") box.classList.add("error")
+        const legend = document.createElement("legend");
+        legend.innerText = `${source} - ${new Date().toLocaleTimeString()}`
+        box.appendChild(legend)
+        const pre = document.createElement("pre");
+        pre.innerHTML = JSON.stringify(message, null, 2)
+        box.appendChild(pre)
+        history?.appendChild(box)
+      }
+      function send(message) {
+        ws.send(JSON.stringify(message))
+        newEvent(message, "Client")
       }
     </script>
   </body>

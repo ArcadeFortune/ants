@@ -1,12 +1,15 @@
 import { Game } from "./game.ts";
 import { ServerEvent } from "./types/comms.ts";
+import { Hive } from "./types/hive.ts";
 
 const port = 8080;
 const game = new Game();
+const hiveSockets = new Map<string, WebSocket>();
+const socketHives = new Map<WebSocket, Hive>();
 
 const clients = new Set<WebSocket>();
 
-Deno.serve({ port, onListen: () => console.log(`Server listening on ws://localhost:${port}`) }, async (req) => {
+Deno.serve({ port, onListen: () => console.log(`Server listening on http://localhost:${port}`) }, async (req) => {
   if (req.headers.get("upgrade") !== "websocket") {
     try {
       const url = new URL(req.url);
@@ -19,9 +22,11 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on ws://localho
     }
   }
   const { socket, response } = Deno.upgradeWebSocket(req);
-  const hive = game.addHive();
 
   socket.addEventListener("open", () => {
+    const hive = game.addHive();
+    hiveSockets.set(hive.uuid, socket);
+    socketHives.set(socket, hive);
     console.log(`Hive ${hive.uuid} connected`);
     clients.forEach(c => c.send(JSON.stringify({
       type: "join",
@@ -38,11 +43,33 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on ws://localho
     } satisfies ServerEvent));
   });
   socket.addEventListener("message", (event) => {
+    try {
+      const message = JSON.parse(event.data); //todo: add type
+
+      switch (message.type) {
+        case "ping":
+          socket.send(JSON.stringify({ type: "pong" }));
+          break;
+        case "me":
+        default:
+          socket.send(JSON.stringify({ type: "error", body: { code: 404, message: `unkown message from client '${message.type}` } }));
+      }
+    } catch (e) {
+      socket.send(JSON.stringify({
+        type: "error",
+        body: {
+          code: 400,
+          message: "request was not in JSON format.",
+        }
+      }));
+    }
     if (event.data === "ping") {
       socket.send("pong");
     }
   });
   socket.addEventListener("close", (event) => {
+    const hive = socketHives.get(socket);
+    if (!hive) return;
     clients.delete(socket);
     clients.forEach(c => c.send(JSON.stringify({
       type: "leave",

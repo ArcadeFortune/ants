@@ -37,12 +37,15 @@ export class Game {
     return hive;
   }
 
-  removeHive(uuid: string) {
-    const hive = this.board.hives.get(uuid);
-    if (!hive) return;
+  removeHive(hive: string | Hive) {
+    if (typeof hive === "string") {
+      const h = this.board.hives.get(hive);
+      if (!h) return;
+      hive = h
+    }
     // Clear tile
     this.board.tiles[hive.y][hive.x].setType(TileType.Empty);
-    this.board.hives.delete(uuid);
+    this.board.hives.delete(hive.uuid);
   }
 
   moveAnt(hive: IHive, ant: IAnt, direction: Direction): boolean {
