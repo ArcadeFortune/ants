@@ -55,52 +55,111 @@
     <div class="status"></div>
 
     <h2>buttons</h2>
-    <button type="button" onclick="establishConnection()">connect</button>
-    <button type="button" onclick="send({type: 'ping'})">ping</button>
-    <button type="button" onclick="send({type: 'whoami'})">who am i</button>
+    <div class="buttons"></div>
 
     <h2>history</h2>
     <div class="history"></div>
     <script>
-      let ws;
-      const history = document.querySelector(".history")
-      const status = document.querySelector(".status")
-      function establishConnection() {
-        status.innerHTML = "Establishing a connection..."
-        ws = new WebSocket("ws://localhost:8080");
-        ws.onopen = (m) => {
-          const message = document.createElement("div");
-          message.innerText = "Connected"
-          status.innerHTML = ""
-          status.appendChild(message)
+      class Model {
+
+      }
+
+      class View {
+        constructor() {
+          this.status = document.querySelector(".status")
+          this.buttons = document.querySelector(".buttons")
+          this.history = document.querySelector(".history")
+          if (!this.status || !this.buttons || !this.history) {
+            throw new Error("Unable to initialize UI.")
+          }
         }
-        ws.onerror = (e) => {
-          const message = document.createElement("div");
-          message.innerText = "Error connecting to server"
-          const tryagain = document.createElement("button");
-          tryagain.innerText = "Try again"
-          tryagain.onclick = () => { status.innerHTML = ""; establishConnection(); }
-          status?.appendChild(message)
-          status?.appendChild(tryagain)
+        el(tag, txt, cls, ...atrs) {
+          const e = document.createElement(tag)
+          if (txt) e.innerText = txt;
+          if (typeof cls === "string") e.classList.add(...cls.split(" ").filter(Boolean));
+          for (const attr of atrs) {
+            if (!attr || typeof attr !== "object") continue;
+            console.log(attr)
+            for (const [name, value] of Object.entries(attr)) {
+              if (name.startsWith("on") && typeof value === "function") {
+                e.addEventListener(name.slice(2), value)
+              } else {
+                e.setAttribute(name, value);
+              }
+            }
+          }
+          return e;
         }
-        ws.onmessage = (m) => newEvent(m.data, "Server")
+        setStatus(message) {
+          this.status.innerHTML = ""
+          this.addStatus(message)
+        }
+        addStatus(message) {
+          const el = this.el("div", message);
+          this.status.appendChild(el)
+        }
+        addHistory(message, source) {
+          if (typeof message === "string") message = JSON.parse(message);
+          const box = this.el("fieldset", '', message.type === "error" ? "error" : "");
+          const legend = this.el("legend", `${source} - ${new Date().toLocaleTimeString()}`)
+          box.appendChild(legend)
+          const pre = this.el("pre", JSON.stringify(message, null, 2));
+          box.appendChild(pre)
+          this.history.appendChild(box)
+        }
+        showControlUI(sendFn) {
+          this.buttons.innerHTML = "";
+          const pingBtn = this.el("button", "ping", "", { type: "button" }, { onclick: () => sendFn({ type: 'ping' }) })
+          const hiveBtn = this.el("button", "hive", "", { type: "button" }, { onclick: () => sendFn({ type: 'hive' }) })
+          this.buttons.appendChild(pingBtn);
+          this.buttons.appendChild(hiveBtn);
+        }
       }
-      function newEvent(message, source = "server") {
-        if (typeof message === "string") message = JSON.parse(message);
-        const box = document.createElement("fieldset");
-        if (message.type === "error") box.classList.add("error")
-        const legend = document.createElement("legend");
-        legend.innerText = `${source} - ${new Date().toLocaleTimeString()}`
-        box.appendChild(legend)
-        const pre = document.createElement("pre");
-        pre.innerHTML = JSON.stringify(message, null, 2)
-        box.appendChild(pre)
-        history?.appendChild(box)
+
+      class Controller {
+        constructor() {
+          this.view = new View();
+          this.ws = this.establishConnection();
+        }
+        establishConnection(tryN = 1) {
+          if (tryN > 3) throw new Error("Unable to establish a connection.")
+          this.view.setStatus("Connecting to server...");
+          try {
+            const ws = new WebSocket("ws://localhost:8080");
+            ws.onopen = () => this.handleOpen();
+            ws.onmessage = (m) => this.handleMessage(m);
+            ws.onerror = (e) => this.handleError(e);
+            return ws;
+          } catch (e) {
+            return this.establishConnection(tryN + 1);
+          }
+        }
+        handleOpen() {
+          this.view.setStatus("Successfully connected to server!")
+          this.view.showControlUI((msg) => { this.ws.send(JSON.stringify(msg)); this.view.addHistory(msg, "Client") });
+        }
+        handleMessage(m) {
+          console.log("new message!")
+          try {
+            const msg = JSON.parse(m.data);
+            this.view.addHistory(msg, "Server");
+            // switch (msg.type) {
+            //   case "hive":
+
+            // }
+          } catch (e) {
+            this.view.addHistory({
+              type: "error",
+              body: e
+            }, "Server")
+          }
+        }
+        handleError(e) {
+          console.error(e);
+          this.view.setStatus("There was an error with the connection.");
+        }
       }
-      function send(message) {
-        ws.send(JSON.stringify(message))
-        newEvent(message, "Client")
-      }
+      new Controller()
     </script>
   </body>
 

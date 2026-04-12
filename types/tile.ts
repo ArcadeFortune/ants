@@ -1,4 +1,3 @@
-import { IAnt } from "./ant.ts";
 import { IHive } from "./hive.ts";
 
 export enum TileType {
@@ -11,10 +10,10 @@ export enum TileType {
 
 export type VisionTile = {
   type: TileType.Hive;
-  hive: IHive;
+  hiveId: string;
 } | {
   type: TileType.Ant;
-  ant: IAnt;
+  antId: string;
 };
 
 export interface ITile {

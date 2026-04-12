@@ -1,7 +1,7 @@
 import { Hive, IHive } from "./types/hive.ts";
 import { IAnt, Ant } from "./types/ant.ts";
 import { ITileDTO, Tile, TileType } from "./types/tile.ts";
-import { getDirectionDelta, isWithinDistance, getNearbyTiles, findRandomEmptyPosition, generateUUID } from "./utils.ts";
+import { getDirectionDelta, isWithinDistance, findRandomEmptyPosition, generateUUID } from "./utils.ts";
 import { Board, Direction } from "./types/general.ts";
 
 export class Game {
@@ -28,20 +28,24 @@ export class Game {
     }
   }
 
-  addHive(uuid: string = generateUUID()): IHive {
+  addHive(uuid: string = generateUUID()): string {
     const pos = findRandomEmptyPosition(this.board.tiles);
     if (!pos) throw new Error("No empty position for hive");
     const hive = new Hive(uuid, pos.x, pos.y);
     this.board.tiles[pos.y][pos.x].setType(TileType.Hive, hive);
     this.board.hives.set(uuid, hive);
-    return hive;
+    return hive.uuid;
+  }
+
+  getHive(uuid?: string) {
+    if (uuid) return this.board.hives.get(uuid);
   }
 
   removeHive(hive: string | Hive) {
     if (typeof hive === "string") {
       const h = this.board.hives.get(hive);
       if (!h) return;
-      hive = h
+      hive = h;
     }
     // Clear tile
     this.board.tiles[hive.y][hive.x].setType(TileType.Empty);
@@ -97,7 +101,7 @@ export class Game {
     }
   }
 
-  getTilesAround(entityX: number, entityY: number, hive: IHive, radius: number = 2): ITileDTO[] {
+  getTilesAround(entityX: number, entityY: number, hiveId: string, radius: number = 2): ITileDTO[] {
     const tilesAround: ITileDTO[] = [];
     for (let dy = -radius; dy <= radius; dy++) {
       for (let dx = -radius; dx <= radius; dx++) {
@@ -105,7 +109,7 @@ export class Game {
         const y = entityY + dy;
         if (x >= 0 && x < this.board.width && y >= 0 && y < this.board.height) {
           const tile = this.board.tiles[y][x];
-          tile.seeingBy.add({ type: TileType.Hive, hive: hive });
+          tile.seeingBy.add({ type: TileType.Hive, hiveId: hiveId });
 
           // tilesAround.push({
           //   hiveId: tile.hive?.uuid,

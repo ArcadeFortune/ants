@@ -1,11 +1,10 @@
 import { Game } from "./game.ts";
 import { ServerEvent } from "./types/comms.ts";
-import { Hive } from "./types/hive.ts";
 
 const port = 8080;
 const game = new Game();
 const hiveSockets = new Map<string, WebSocket>();
-const socketHives = new Map<WebSocket, Hive>();
+const socketHives = new Map<WebSocket, string>();
 
 const clients = new Set<WebSocket>();
 
@@ -24,23 +23,29 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
   const { socket, response } = Deno.upgradeWebSocket(req);
 
   socket.addEventListener("open", () => {
-    const hive = game.addHive();
-    hiveSockets.set(hive.uuid, socket);
-    socketHives.set(socket, hive);
-    console.log(`Hive ${hive.uuid} connected`);
+    const hiveId = game.addHive();
+    hiveSockets.set(hiveId, socket);
+    socketHives.set(socket, hiveId);
+    console.log(`Hive ${hiveId} connected`);
     clients.forEach(c => c.send(JSON.stringify({
       type: "join",
       body: {
-        hiveId: hive.uuid
+        hiveId: hiveId
       }
     } satisfies ServerEvent)));
     clients.add(socket);
     socket.send(JSON.stringify({
       type: "tiles",
       body: {
-        tiles: game.getTilesAround(hive.x, hive.y, hive)
+        tiles: game.getTilesAround(hiveId.x, hiveId.y, hiveId)
       }
     } satisfies ServerEvent));
+    socket.send(JSON.stringify({
+      type: "newHive",
+      body: {
+        uuid: hiveId,
+      },
+    }));
   });
   socket.addEventListener("message", (event) => {
     try {
@@ -50,9 +55,16 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
         case "ping":
           socket.send(JSON.stringify({ type: "pong" }));
           break;
-        case "me":
+        case "hive":
+          socket.send(JSON.stringify({
+            type: "yourHive",
+            body: {
+              hive: game.getHive(socketHives.get(socket))
+            },
+          }));
+          break;
         default:
-          socket.send(JSON.stringify({ type: "error", body: { code: 404, message: `unkown message from client '${message.type}` } }));
+          socket.send(JSON.stringify({ type: "error", body: { code: 404, message: `unkown message from client: "${message.type}"` } }));
       }
     } catch (e) {
       socket.send(JSON.stringify({
@@ -68,16 +80,16 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
     }
   });
   socket.addEventListener("close", (event) => {
-    const hive = socketHives.get(socket);
-    if (!hive) return;
+    const hiveId = socketHives.get(socket);
+    if (!hiveId) return;
     clients.delete(socket);
     clients.forEach(c => c.send(JSON.stringify({
       type: "leave",
       body: {
-        hiveId: hive.uuid
+        hiveId: hiveId
       }
     } satisfies ServerEvent)));
-    game.removeHive(hive.uuid);
+    game.removeHive(hiveId);
   });
 
   return response;
