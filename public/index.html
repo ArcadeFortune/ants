@@ -59,10 +59,14 @@
 
     <h2>history</h2>
     <div class="history"></div>
+    
     <script>
       class Model {
         constructor() {
           this.ws = null;
+          this.state = {
+            myHives: [],
+          }
           this.listeners = [];
         }
         establishConnection() {
@@ -93,10 +97,14 @@
               from: "Server",
               body: msg,
             })
-            // // switch (msg.type) {
-            // //   case "hive":
-
-            // // }
+            switch (msg.type) {
+              case "yourHive":
+                this.state.myHives.push(msg.body.hive);
+                this.notify({
+                  type: "playableAnts",
+                  body: this.state.myHives.flatMap(h => h.ants.map(a => a.id)),
+                })
+            }
           } catch (e) {
             this.notify({
               type: "error",
@@ -108,11 +116,24 @@
         subscribe(listener) {
           this.listeners.push(listener);
         }
-
         notify(payload) {
           for (const listener of this.listeners) {
             listener(payload);
           }
+        }
+        send(msg) {
+          this.ws.send(JSON.stringify(msg));
+          this.notify({
+            type: "log",
+            from: "Client",
+            body: msg,
+          })
+        }
+        ping() {
+          this.send({ type: "ping" })
+        }
+        whoami() {
+          this.send({ type: "whoami" })
         }
       }
 
@@ -170,6 +191,12 @@
           this.buttons.appendChild(pingBtn);
           this.buttons.appendChild(hiveBtn);
         }
+        showAntsUI(allAnts, onMoveFn) {
+          allAnts.forEach((ant, i) => {
+            const antBtn = this.el("button", `Ant #${i}`, "", { type: "button" }, { onclick: () => onMoveFn(ant, "north") })
+            this.buttons.append(antBtn)
+          })
+        }
         showRetryUI(retryFn) {
           this.buttons.innerHTML = ""
           const retryBtn = this.el("button", "retry", "", { type: "button" }, { onclick: retryFn })
@@ -181,6 +208,7 @@
         constructor(model, view) {
           view.showConnectUI(() => model.establishConnection());
           model.subscribe((payload) => {
+            // events from model
             switch (payload.type) {
               case "log":
                 view.addHistory(payload.body, payload.from);
@@ -196,21 +224,28 @@
                 view.showControlUI((payload) => {
                   switch (payload.type) {
                     case "ping":
-                      console.log('ping')
+                      model.ping();
                       break;
                     case "hive":
-                      console.log('hive')
+                      model.whoami();
                       break;
                     default:
                       console.log("unkown input")
                   }
                 })
                 break;
+              case "playableAnts":
+                view.showAntsUI(payload.body, (ant, direction) => {
+                  console.log(`ant ${ant} moveds in ${direction}`);
+                })
+                break;
+              default:
+                console.warn(`Unknown command: ${payload.type}`);
             }
           })
         }
       }
-      // new Controller()
+      
       const game = new Model();
       const display = new View();
       const manager = new Controller(game, display)

@@ -55,7 +55,7 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
         case "ping":
           socket.send(JSON.stringify({ type: "pong" }));
           break;
-        case "hive":
+        case "whoami":
           socket.send(JSON.stringify({
             type: "yourHive",
             body: {
