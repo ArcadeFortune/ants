@@ -61,7 +61,59 @@
     <div class="history"></div>
     <script>
       class Model {
+        constructor() {
+          this.ws = null;
+          this.listeners = [];
+        }
+        establishConnection() {
+          this.ws = new WebSocket("ws://localhost:8080");
+          this.notify({
+            type: "connectionTry"
+          })
+          this.ws.onopen = () => this.notify({
+            type: "connectionSuccessful"
+          })
+          this.ws.onmessage = (m) => this.handleMessage(m);
+          this.ws.onerror = (e) => this.notify({
+            type: "error",
+            from: "Server",
+            body: e,
+          });
+          this.ws.onclose = () => this.notify({
+            type: "error",
+            from: "Server",
+            body: "Connection closed.",
+          });
+        }
+        handleMessage(m) {
+          try {
+            const msg = JSON.parse(m.data);
+            this.notify({
+              type: "log",
+              from: "Server",
+              body: msg,
+            })
+            // // switch (msg.type) {
+            // //   case "hive":
 
+            // // }
+          } catch (e) {
+            this.notify({
+              type: "error",
+              from: "Server",
+              body: e,
+            })
+          }
+        }
+        subscribe(listener) {
+          this.listeners.push(listener);
+        }
+
+        notify(payload) {
+          for (const listener of this.listeners) {
+            listener(payload);
+          }
+        }
       }
 
       class View {
@@ -79,7 +131,6 @@
           if (typeof cls === "string") e.classList.add(...cls.split(" ").filter(Boolean));
           for (const attr of atrs) {
             if (!attr || typeof attr !== "object") continue;
-            console.log(attr)
             for (const [name, value] of Object.entries(attr)) {
               if (name.startsWith("on") && typeof value === "function") {
                 e.addEventListener(name.slice(2), value)
@@ -107,59 +158,62 @@
           box.appendChild(pre)
           this.history.appendChild(box)
         }
-        showControlUI(sendFn) {
+        showConnectUI(connectFn) {
           this.buttons.innerHTML = "";
-          const pingBtn = this.el("button", "ping", "", { type: "button" }, { onclick: () => sendFn({ type: 'ping' }) })
-          const hiveBtn = this.el("button", "hive", "", { type: "button" }, { onclick: () => sendFn({ type: 'hive' }) })
+          const connectBtn = this.el("button", "connect", "", { type: "button" }, { onclick: connectFn })
+          this.buttons.appendChild(connectBtn);
+        }
+        showControlUI(inputFn) {
+          this.buttons.innerHTML = "";
+          const pingBtn = this.el("button", "ping", "", { type: "button" }, { onclick: () => inputFn({ type: 'ping' }) })
+          const hiveBtn = this.el("button", "hive", "", { type: "button" }, { onclick: () => inputFn({ type: 'hive' }) })
           this.buttons.appendChild(pingBtn);
           this.buttons.appendChild(hiveBtn);
+        }
+        showRetryUI(retryFn) {
+          this.buttons.innerHTML = ""
+          const retryBtn = this.el("button", "retry", "", { type: "button" }, { onclick: retryFn })
+          this.buttons.appendChild(retryBtn);
         }
       }
 
       class Controller {
-        constructor() {
-          this.view = new View();
-          this.ws = this.establishConnection();
-        }
-        establishConnection(tryN = 1) {
-          if (tryN > 3) throw new Error("Unable to establish a connection.")
-          this.view.setStatus("Connecting to server...");
-          try {
-            const ws = new WebSocket("ws://localhost:8080");
-            ws.onopen = () => this.handleOpen();
-            ws.onmessage = (m) => this.handleMessage(m);
-            ws.onerror = (e) => this.handleError(e);
-            return ws;
-          } catch (e) {
-            return this.establishConnection(tryN + 1);
-          }
-        }
-        handleOpen() {
-          this.view.setStatus("Successfully connected to server!")
-          this.view.showControlUI((msg) => { this.ws.send(JSON.stringify(msg)); this.view.addHistory(msg, "Client") });
-        }
-        handleMessage(m) {
-          console.log("new message!")
-          try {
-            const msg = JSON.parse(m.data);
-            this.view.addHistory(msg, "Server");
-            // switch (msg.type) {
-            //   case "hive":
-
-            // }
-          } catch (e) {
-            this.view.addHistory({
-              type: "error",
-              body: e
-            }, "Server")
-          }
-        }
-        handleError(e) {
-          console.error(e);
-          this.view.setStatus("There was an error with the connection.");
+        constructor(model, view) {
+          view.showConnectUI(() => model.establishConnection());
+          model.subscribe((payload) => {
+            switch (payload.type) {
+              case "log":
+                view.addHistory(payload.body, payload.from);
+                break;
+              case "error":
+                view.addHistory(payload.body, payload.from);
+                break;
+              case "connectionTry":
+                view.setStatus("Connecting to server...");
+                break;
+              case "connectionSuccessful":
+                view.setStatus("Successfully connected to server!");
+                view.showControlUI((payload) => {
+                  switch (payload.type) {
+                    case "ping":
+                      console.log('ping')
+                      break;
+                    case "hive":
+                      console.log('hive')
+                      break;
+                    default:
+                      console.log("unkown input")
+                  }
+                })
+                break;
+            }
+          })
         }
       }
-      new Controller()
+      // new Controller()
+      const game = new Model();
+      const display = new View();
+      const manager = new Controller(game, display)
     </script>
   </body>
 
