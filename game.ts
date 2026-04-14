@@ -1,8 +1,7 @@
-import { Hive, IHive } from "./types/hive.ts";
-import { IAnt, Ant } from "./types/ant.ts";
-import { ITileDTO, Tile, TileType } from "./types/tile.ts";
-import { getDirectionDelta, isWithinDistance, findRandomEmptyPosition, generateUUID } from "./utils.ts";
-import { Board, Direction } from "./types/general.ts";
+import { Tile, TileType, generateTiles } from "./types/tile.ts";
+import { findRandomEmptyPosition } from "./utils.ts";
+import { Board, Entity } from "./types/general.ts";
+import { Player } from "./types/player.ts";
 
 export class Game {
   board: Board;
@@ -11,8 +10,8 @@ export class Game {
     this.board = {
       width: 200,
       height: 200,
-      tiles: Array.from({ length: 200 }, () => Array.from({ length: 200 }, () => new Tile())),
-      hives: new Map(),
+      tiles: generateTiles(200, 200),
+      players: new Map(),
     };
     // Initialize some food and walls randomly
     for (let y = 0; y < 200; y++) {
@@ -28,98 +27,125 @@ export class Game {
     }
   }
 
-  addHive(uuid: string = generateUUID()): string {
+  addPlayer(playerId: string) {
     const pos = findRandomEmptyPosition(this.board.tiles);
     if (!pos) throw new Error("No empty position for hive");
-    const hive = new Hive(uuid, pos.x, pos.y);
-    this.board.tiles[pos.y][pos.x].setType(TileType.Hive, hive);
-    this.board.hives.set(uuid, hive);
-    return hive.uuid;
+    const player = new Player(playerId, pos.x, pos.y);
+    this.board.players.set(player.id, player);
+
+    this.board.tiles[pos.y][pos.x].setType(TileType.Hive, player.hives[0]);
+    return player;
   }
 
-  getHive(uuid?: string) {
-    if (uuid) return this.board.hives.get(uuid);
+  // getHive(playerId: string) {
+  //   return this.board.hives.get(playerId);
+  // }
+
+  removePlayer(playerId: string) {
+    console.log('looking for player', playerId);
+    const player = this.board.players.get(playerId);
+    if (!player) throw new Error("Player does not exist");
+
+    for (const hive of player.hives) {
+      this.board.tiles[hive.y][hive.x].setType(TileType.Empty);
+    }
+
+    // player.hives.length = 0;
+    player.clear();
+    this.board.players.delete(player.id);
   }
 
-  removeHive(hive: string | Hive) {
-    if (typeof hive === "string") {
-      const h = this.board.hives.get(hive);
-      if (!h) return;
-      hive = h;
-    }
-    // Clear tile
-    this.board.tiles[hive.y][hive.x].setType(TileType.Empty);
-    this.board.hives.delete(hive.uuid);
-  }
-
-  moveAnt(hive: IHive, ant: IAnt, direction: Direction): boolean {
-    const now = Date.now();
-    if (now - ant.lastMove < 2000) return false; // cooldown
-    const delta = getDirectionDelta(direction);
-    const newX = ant.x + delta.x;
-    const newY = ant.y + delta.y;
-    if (newX < 0 || newX >= this.board.width || newY < 0 || newY >= this.board.height) return false;
-    const tile = this.board.tiles[newY][newX];
-    if (tile.type === TileType.Wall) return false;
-    // If moving to food and not carrying, pick up
-    if (tile.type === TileType.Food && !ant.carrying) {
-      ant.carrying = true;
-      this.board.tiles[newY][newX].setType(TileType.Empty);
-    }
-    // If moving to hive and carrying, drop and spawn new ant
-    if (tile.type === TileType.Hive && tile.hive?.uuid === hive.uuid && ant.carrying) {
-      ant.carrying = false;
-      hive.ants.push(new Ant(hive.x, hive.y));
-    }
-    // Move ant
-    ant.x = newX;
-    ant.y = newY;
-    ant.lastMove = now;
-
-    // Check collisions
-    // this.checkCollisions();
-    return true;
-  }
-
-  checkCollisions() {
-    const allAnts: { ant: Ant; hive: IHive; }[] = [];
-    for (const hive of this.board.hives.values()) {
-      for (const ant of hive.ants) {
-        allAnts.push({ ant, hive });
-      }
-    }
-    for (let i = 0; i < allAnts.length; i++) {
-      for (let j = i + 1; j < allAnts.length; j++) {
-        const a = allAnts[i];
-        const b = allAnts[j];
-        if (isWithinDistance({ x: a.ant.x, y: a.ant.y }, { x: b.ant.x, y: b.ant.y }, 1)) {
-          // Remove both ants
-          a.hive.ants = a.hive.ants.filter(ant => ant.id !== a.ant.id);
-          b.hive.ants = b.hive.ants.filter(ant => ant.id !== b.ant.id);
-        }
-      }
-    }
-  }
-
-  getTilesAround(entityX: number, entityY: number, hiveId: string, radius: number = 2): ITileDTO[] {
-    const tilesAround: ITileDTO[] = [];
+  getVision(entity: Entity, radius: number = 2) {
+    const newTiles: Tile[] = [];
     for (let dy = -radius; dy <= radius; dy++) {
       for (let dx = -radius; dx <= radius; dx++) {
-        const x = entityX + dx;
-        const y = entityY + dy;
-        if (x >= 0 && x < this.board.width && y >= 0 && y < this.board.height) {
-          const tile = this.board.tiles[y][x];
-          tile.seeingBy.add({ type: TileType.Hive, hiveId: hiveId });
+        const x = entity.x + dx;
+        const y = entity.y + dy;
+        const tile = this.board.tiles[y][x];
+        newTiles.push(tile);
 
-          // tilesAround.push({
-          //   hiveId: tile.hive?.uuid,
-          //   type: tile.type,
-          // });
-          tilesAround.push(tile); //todo remove dev
-        }
+        // if (antId) {
+        //   tile.seeingBy.push({
+        //     type: TileType.Ant,
+        //     antId: antId,
+        //     hiveId: hiveId
+        //   });
+        // } else {
+        //   tile.seeingBy.push({
+        //     type: TileType.Hive,
+        //     hiveId: hiveId
+        //   });
+        // }
       }
     }
-    return tilesAround;
+    return newTiles;
+  }
+
+  // removeVision(x: number, y: number, hiveId: number, radius: number = 2, antId?: number) {
+  //   //if ant, remove that ant id from the tiles
+  //   //if hiveid, remove that hiveid from the tiles
+  // }
+
+  // spawnAnt(hive: Hive) {
+  //   const ant = new Ant(hive.id, hive.x, hive.y);
+  //   this.board.hives.get(hive.id)?.ants.push(ant);
+  //   return ant;
+  // }
+
+  // getAnts(playerId: string) {
+  //   const hive = this.board.hives.get(playerId);
+  //   if (!hive) return [];
+  //   return hive.ants;
+  // }
+
+  // moveAnt(hiveId: string, antId: string, direction: Direction): boolean {
+  // const hive = this.board.hives.get(hiveId);
+  // const now = Date.now();
+  // if (now - ant.lastMove < 2000) return false; // cooldown
+  // const delta = getDirectionDelta(direction);
+  // const newX = ant.x + delta.x;
+  // const newY = ant.y + delta.y;
+  // if (newX < 0 || newX >= this.board.width || newY < 0 || newY >= this.board.height) return false;
+  // const tile = this.board.tiles[newY][newX];
+  // if (tile.type === TileType.Wall) return false;
+  // // If moving to food and not carrying, pick up
+  // if (tile.type === TileType.Food && !ant.carrying) {
+  //   ant.carrying = true;
+  //   this.board.tiles[newY][newX].setType(TileType.Empty);
+  // }
+  // // // If moving to hive and carrying, drop and spawn new ant
+  // // if (tile.type === TileType.Hive && tile.hive?.uuid === hive.hiveId && ant.carrying) {
+  // //   ant.carrying = false;
+  // //   hive.ants.push(new Ant(hive.x, hive.y));
+  // // }
+  // // Move ant
+  // ant.x = newX;
+  // ant.y = newY;
+  // ant.lastMove = now;
+
+  // // Check collisions
+  // // this.checkCollisions();
+  // return true;
+  // }
+
+  checkCollisions() {
+    // const allAnts: { ant: Ant; hive: Hive; }[] = [];
+    // for (const hive of this.board.hives.values()) {
+    //   for (const ant of hive.ants) {
+    //     allAnts.push({ ant, hive });
+    //   }
+    // }
+    // for (let i = 0; i < allAnts.length; i++) {
+    //   for (let j = i + 1; j < allAnts.length; j++) {
+    //     const a = allAnts[i];
+    //     const b = allAnts[j];
+    //     if (isWithinDistance({ x: a.ant.x, y: a.ant.y }, { x: b.ant.x, y: b.ant.y }, 1)) {
+    //       // Remove both ants
+    //       a.hive.ants = a.hive.ants.filter(ant => ant.id !== a.ant.id);
+    //       b.hive.ants = b.hive.ants.filter(ant => ant.id !== b.ant.id);
+    //     }
+    //   }
+    // }
   }
 
   // getUpdateForClient(uuid: string): ServerMessage | null {

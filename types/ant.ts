@@ -1,20 +1,29 @@
 import { generateUUID } from "../utils.ts";
+import { Entity } from "./general.ts";
 
-export interface IAnt {
-  id: string;
-  x: number;
-  y: number;
-  carrying: boolean;
-  lastMove: number; // Date.now()
-}
-
-export class Ant implements IAnt {
-  id = generateUUID();
+export class Ant implements Entity {
+  readonly type = "ant";
+  readonly id = generateUUID();
   carrying = false;
   lastMove = 0;
 
   constructor(
+    public hiveId: string,
     public x: number,
-    public y: number
+    public y: number,
   ) { }
+}
+
+export class AntDTO {
+  id: string;
+  hiveId: string;
+  x: number;
+  y: number;
+
+  constructor(ant: Ant) {
+    this.id = ant.id;
+    this.hiveId = ant.hiveId;
+    this.x = ant.x;
+    this.y = ant.y;
+  }
 }

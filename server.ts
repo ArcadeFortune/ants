@@ -1,10 +1,13 @@
 import { Game } from "./game.ts";
-import { ServerEvent } from "./types/comms.ts";
+import { ClientMessage, serverEvent, ServerEvent } from "./types/comms.ts";
+import { PlayerDTO } from "./types/player.ts";
+import { TileDTO } from "./types/tile.ts";
+import { generateUUID } from "./utils.ts";
 
 const port = 8080;
 const game = new Game();
-const hiveSockets = new Map<string, WebSocket>();
-const socketHives = new Map<WebSocket, string>();
+const playerSockets = new Map<string, WebSocket>();
+const socketPlayers = new Map<WebSocket, string>();
 
 const clients = new Set<WebSocket>();
 
@@ -23,55 +26,71 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
   const { socket, response } = Deno.upgradeWebSocket(req);
 
   socket.addEventListener("open", () => {
-    const hiveId = game.addHive();
-    hiveSockets.set(hiveId, socket);
-    socketHives.set(socket, hiveId);
-    console.log(`Hive ${hiveId} connected`);
-    clients.forEach(c => c.send(JSON.stringify({
+    // Accept new connections
+    // assign new PlayerSession
+    // send InitState todo: one special server message response "ServerPlayerInitEvent"
+    const playerId = generateUUID();
+    const player = game.addPlayer(playerId);
+    const initialHive = player.hives[0];
+    if (!initialHive) return socket.send(serverEvent({ type: "error", body: { code: 500, message: "Something went wrong with the hive creation..." } }));
+    playerSockets.set(playerId, socket);
+    socketPlayers.set(socket, playerId);
+    console.log(`Player ${playerId} connected`);
+
+    clients.forEach(s => s.send(serverEvent({
       type: "join",
       body: {
-        hiveId: hiveId
+        hiveId: initialHive.id,
       }
-    } satisfies ServerEvent)));
+    })));
     clients.add(socket);
-    socket.send(JSON.stringify({
-      type: "tiles",
+
+    socket.send(serverEvent({
+      type: "init",
       body: {
-        tiles: game.getTilesAround(hiveId.x, hiveId.y, hiveId)
+        you: new PlayerDTO(player),
+        tiles: game.getVision(initialHive, 2).map(t => new TileDTO(t))
       }
-    } satisfies ServerEvent));
-    socket.send(JSON.stringify({
-      type: "newHive",
-      body: {
-        uuid: hiveId,
-      },
     }));
   });
+
   socket.addEventListener("message", (event) => {
+    // Receive messages
+    // validate todo: have utility function validate
+    // translate into server-side actions (e.g., join, move)
     try {
-      const message = JSON.parse(event.data); //todo: add type
+      const message: ClientMessage = JSON.parse(event.data);
 
       switch (message.type) {
-        case "ping":
+        case "ping": {
           socket.send(JSON.stringify({ type: "pong" }));
           break;
-        case "whoami":
-          socket.send(JSON.stringify({
-            type: "yourHive",
-            body: {
-              hive: game.getHive(socketHives.get(socket))
-            },
-          }));
+        }
+        // case "whoami": {
+        //   socket.send(JSON.stringify({
+        //     type: "yourHive",
+        //     body: {
+        //       hive: game.getHive(socketPlayers.get(socket))
+        //     },
+        //   }));
+        //   break;
+        // }
+        case "move": {
+          //TODO; Broadcast per-player vision/updates (only what they should see)
+          console.log(`Client wants to move ${message.antId} to ${message.direction}`);
+          // game.moveAnt(message.antId, message.direction);
+        }
           break;
-        default:
-          socket.send(JSON.stringify({ type: "error", body: { code: 404, message: `unkown message from client: "${message.type}"` } }));
+        default: {
+          socket.send(JSON.stringify({ type: "error", body: { code: 404, message: `unkown message from client: "${JSON.stringify(message)}"` } }));
+        }
       }
     } catch (e) {
       socket.send(JSON.stringify({
         type: "error",
         body: {
           code: 400,
-          message: "request was not in JSON format.",
+          message: "Request was not in JSON format: " + e,
         }
       }));
     }
@@ -79,17 +98,19 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
       socket.send("pong");
     }
   });
-  socket.addEventListener("close", (event) => {
-    const hiveId = socketHives.get(socket);
-    if (!hiveId) return;
+
+  socket.addEventListener("close", (_event) => {
+    // Handle disconnects (mark player as offline; possibly reassign hive ownership or keep until timeout)
+    const playerId = socketPlayers.get(socket);
+    if (!playerId) return;
     clients.delete(socket);
     clients.forEach(c => c.send(JSON.stringify({
       type: "leave",
       body: {
-        hiveId: hiveId
+        hiveId: playerId
       }
     } satisfies ServerEvent)));
-    game.removeHive(hiveId);
+    game.removePlayer(playerId);
   });
 
   return response;
@@ -97,26 +118,6 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
 
 
 // const handler = (req: Request) => {
-//   // if (req.headers.get("upgrade") !== "websocket") {
-//   //   return new Response("Not a websocket request", { status: 400 });
-//   // }
-
-//   // const { socket, response } = Deno.upgradeWebSocket(req);
-
-//   // const uuid = generateUUID();
-//   try {
-//     // game.addHive(uuid);
-//   } catch (e) {
-//     console.error("Failed to add hive", e);
-//     return new Response("Server full", { status: 500 });
-//   }
-
-//   socket.onopen = () => {
-//     // console.log(`Client ${uuid} connected`);
-//     // Send initial update
-//     const update = game.getUpdateForClient(uuid);
-//     if (update) socket.send(JSON.stringify(update));
-//   };
 
 //   socket.onmessage = (event) => {
 //     try {

@@ -16,6 +16,7 @@
 
         fieldset {
           animation: newMessage 2s ease-out forwards;
+          mix-blend-mode: normal;
 
           &.error {
             animation: newError 2s ease-out forwards;
@@ -30,21 +31,21 @@
 
       @keyframes newMessage {
         from {
-          background-color: #00ff7c;
+          background-color: #00ff7b64;
         }
 
         to {
-          background-color: rgb(255, 255, 255);
+          background-color: rgba(255, 255, 255, 0);
         }
       }
 
       @keyframes newError {
         from {
-          background-color: #ff0000;
+          background-color: #ff00004a;
         }
 
         to {
-          background-color: rgb(255, 255, 255);
+          background-color: rgba(255, 255, 255, 0);
         }
       }
     </style>
@@ -59,7 +60,7 @@
 
     <h2>history</h2>
     <div class="history"></div>
-    
+
     <script>
       class Model {
         constructor() {
@@ -74,9 +75,11 @@
           this.notify({
             type: "connectionTry"
           })
-          this.ws.onopen = () => this.notify({
-            type: "connectionSuccessful"
-          })
+          this.ws.onopen = () => {
+            this.notify({
+              type: "connectionSuccessful"
+            })
+          }
           this.ws.onmessage = (m) => this.handleMessage(m);
           this.ws.onerror = (e) => this.notify({
             type: "error",
@@ -84,9 +87,15 @@
             body: e,
           });
           this.ws.onclose = () => this.notify({
-            type: "error",
+            type: "log",
             from: "Server",
-            body: "Connection closed.",
+            body: {
+              type: "error",
+              body: {
+                code: 500,
+                message: "Connection closed."
+              }
+            },
           });
         }
         handleMessage(m) {
@@ -135,6 +144,11 @@
         whoami() {
           this.send({ type: "whoami" })
         }
+        move(antId, direction) {
+          this.send({
+            type: "move", antId, direction
+          })
+        }
       }
 
       class View {
@@ -181,7 +195,7 @@
         }
         showConnectUI(connectFn) {
           this.buttons.innerHTML = "";
-          const connectBtn = this.el("button", "connect", "", { type: "button" }, { onclick: connectFn })
+          const connectBtn = this.el("button", "connect", "", { type: "button" }, { onclick: connectFn });
           this.buttons.appendChild(connectBtn);
         }
         showControlUI(inputFn) {
@@ -208,13 +222,14 @@
         constructor(model, view) {
           view.showConnectUI(() => model.establishConnection());
           model.subscribe((payload) => {
+            console.log("new type!", payload.type)
             // events from model
             switch (payload.type) {
               case "log":
                 view.addHistory(payload.body, payload.from);
                 break;
               case "error":
-                view.addHistory(payload.body, payload.from);
+                view.addHistory({ type: "error", body: payload.body }, payload.from);
                 break;
               case "connectionTry":
                 view.setStatus("Connecting to server...");
@@ -236,7 +251,7 @@
                 break;
               case "playableAnts":
                 view.showAntsUI(payload.body, (ant, direction) => {
-                  console.log(`ant ${ant} moveds in ${direction}`);
+                  model.move(ant, direction);
                 })
                 break;
               default:
@@ -245,7 +260,7 @@
           })
         }
       }
-      
+
       const game = new Model();
       const display = new View();
       const manager = new Controller(game, display)

@@ -1,37 +1,78 @@
 import { Direction } from "node:readline";
-import { IHive } from "./hive.ts";
-import { ITileDTO } from "./tile.ts";
+import { HiveDTO } from "./hive.ts";
+import { TileDTO } from "./tile.ts";
+import { AntDTO } from "./ant.ts";
+import { PlayerDTO } from "./player.ts";
 
 
-export interface ClientMessage {
-  type: "connect" | "move";
-  antId?: string;
-  direction?: Direction;
+interface ServerPlayerInitEvent {
+  type: "init";
+  body: {
+    you: PlayerDTO;
+    tiles: TileDTO[];
+  };
 }
 
 interface ServerJoinEvent {
   type: "join";
   body: {
-    hiveId: IHive["uuid"];
+    hiveId: string;
   };
 }
 
 interface ServerLeaveEvent {
   type: "leave";
   body: {
-    hiveId: IHive["uuid"];
+    hiveId: string;
   };
 }
 
 interface ServerTilesEvent {
   type: "tiles";
   body: {
-    tiles: ITileDTO[];
+    tiles: TileDTO[];
   };
 }
 
-export type ServerEvent = ServerJoinEvent | ServerLeaveEvent | ServerTilesEvent;
+interface ServerYourIdentityEvent {
+  type: "yourIdentity";
+  body: {
+    playerId: string;
+    hive: HiveDTO;
+    ants: AntDTO[];
+  };
+}
 
+interface ServerErrorEvent {
+  type: "error";
+  body: {
+    code: number;
+    message: string;
+  };
+}
+
+export type ServerEvent = ServerPlayerInitEvent | ServerJoinEvent | ServerLeaveEvent | ServerTilesEvent | ServerYourIdentityEvent | ServerErrorEvent;
+
+export function serverEvent(e: ServerEvent): string {
+  return JSON.stringify(e);
+}
+
+
+interface ClientPingMessage {
+  type: "ping";
+}
+
+interface ClientWhoAmIMessage {
+  type: "whoami";
+}
+
+interface ClientMoveMessage {
+  type: "move";
+  antId: string;
+  direction: Direction;
+}
+
+export type ClientMessage = ClientPingMessage | ClientWhoAmIMessage | ClientMoveMessage;
 // export interface ServerMessage {
 //   type: "update";
 //   ants: {

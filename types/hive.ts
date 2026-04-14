@@ -1,21 +1,19 @@
 import { generateUUID } from "../utils.ts";
-import { Ant, IAnt } from "./ant.ts";
+import { Ant } from "./ant.ts";
+import { Entity } from "./general.ts";
 
-export interface IHive {
-  uuid: string;
-  x: number;
-  y: number;
-  ants: IAnt[];
-}
-
-export interface IHiveDTO {
-  uuid: string;
-}
-
-export class Hive implements IHive {
-  ants: IAnt[];
-  constructor(public uuid: string = generateUUID(), public x: number, public y: number) {
-    this.ants = [new Ant(x, y), new Ant(x, y)];
+export class HiveDTO {
+  id: string;
+  constructor(hive: Hive) {
+    this.id = hive.id;
   }
 }
 
+export class Hive implements Entity {
+  readonly type = "hive";
+  readonly id: string = generateUUID();
+  ants: Ant[] = [];
+  constructor(public playerId: string, public x: number, public y: number) {
+    this.ants.push(...[new Ant(this.id, x, y), new Ant(this.id, x, y)]);
+  }
+}

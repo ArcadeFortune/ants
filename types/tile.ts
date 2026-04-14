@@ -1,4 +1,5 @@
-import { IHive } from "./hive.ts";
+import { Ant } from "./ant.ts";
+import { Hive } from "./hive.ts";
 
 export enum TileType {
   Empty = "empty",
@@ -14,33 +15,40 @@ export type VisionTile = {
 } | {
   type: TileType.Ant;
   antId: string;
+  hiveId: string;
 };
 
-export interface ITile {
-  readonly type: TileType;
-  seenBy: Set<VisionTile>; // ants/hives that have seen it. will not send tile infos again to these clients. gets cleared upon any modification
-  seeingBy: Set<VisionTile>; // ants/hives that are seeing it. modifying tiletype immediately informs these clients. gets cleared upon moving away
-  hive?: IHive; // for hive tiles
+export class TileDTO {
+  type: TileType;
+  x: number;
+  y: number;
+  hiveId?: string;
+  antId?: string;
 
-  setType(newType: TileType.Hive, hive: IHive): void;
-  setType(newType: Exclude<TileType, TileType.Hive>, hive?: undefined): void;
-  setType(newType: TileType, hive?: IHive): void;
+  constructor(tile: Tile) {
+    if (!tile) {
+      console.log("UNKONWN TILE FOUND");
+    }
+    this.type = tile.type;
+    this.x = tile.x;
+    this.y = tile.y;
+    this.hiveId = tile.hive?.id;
+    this.antId = tile.ant?.id;
+  }
 }
 
-export interface ITileDTO {
-  type: ITile["type"];
-  hiveId?: IHive["uuid"];
-}
-
-export class Tile implements ITile {
-  seenBy: ITile["seenBy"] = new Set();
-  seeingBy: ITile["seeingBy"] = new Set();
-  constructor(public type: ITile["type"] = TileType.Empty, public hive?: ITile["hive"]) { }
+export class Tile {
+  seenBy: VisionTile[] = []; // ants/hives that have seen it. will not send tile infos again to these clients. gets cleared upon any modification
+  seeingBy: VisionTile[] = []; // ants/hives that are seeing it. modifying tiletype immediately informs these clients. gets cleared upon moving away
+  hive?: Hive;
+  ant?: Ant;
+  //todo: food
+  constructor(public type: TileType = TileType.Empty, public x: number, public y: number) { }
 
 
-  setType(newType: TileType.Hive, hive: IHive): void;
+  setType(newType: TileType.Hive, hive: Hive): void;
   setType(newType: Exclude<TileType, TileType.Hive>, hive?: undefined): void;
-  setType(newType: TileType, hive?: IHive) {
+  setType(newType: TileType, hive?: Hive) {
     if (newType === TileType.Hive && !hive) {
       throw new Error("Hive data is required for Hive tiles");
     }
@@ -53,4 +61,15 @@ export class Tile implements ITile {
     this.hive = hive;
     // this.seenBy.clear(); //todo: inform these clients of new tile
   }
+}
+
+export function generateTiles(width: number, height: number) {
+  const tiles: Tile[][] = [];
+  for (let y = 0; y < height; y++) {
+    tiles.push([]);
+    for (let x = 0; x < width; x++) {
+      tiles[y].push(new Tile(TileType.Empty, x, y));
+    }
+  }
+  return tiles;
 }
