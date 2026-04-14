@@ -1,6 +1,6 @@
 import { Tile, TileType, generateTiles } from "./types/tile.ts";
-import { findRandomEmptyPosition } from "./utils.ts";
-import { Board, Entity } from "./types/general.ts";
+import { findRandomEmptyPosition, getDirectionDelta } from "./utils.ts";
+import { Board, Direction, Entity } from "./types/general.ts";
 import { Player } from "./types/player.ts";
 
 export class Game {
@@ -42,7 +42,6 @@ export class Game {
   // }
 
   removePlayer(playerId: string) {
-    console.log('looking for player', playerId);
     const player = this.board.players.get(playerId);
     if (!player) throw new Error("Player does not exist");
 
@@ -55,6 +54,10 @@ export class Game {
     this.board.players.delete(player.id);
   }
 
+  /**
+   * gets vision around an entity, also marking these tiles as seen by that entity
+   * @returns new tiles affected
+   */
   getVision(entity: Entity, radius: number = 2) {
     const newTiles: Tile[] = [];
     for (let dy = -radius; dy <= radius; dy++) {
@@ -62,20 +65,23 @@ export class Game {
         const x = entity.x + dx;
         const y = entity.y + dy;
         const tile = this.board.tiles[y][x];
+
+        if (tile.seeingBy.has(entity.playerId)) continue;
         newTiles.push(tile);
 
-        // if (antId) {
-        //   tile.seeingBy.push({
-        //     type: TileType.Ant,
-        //     antId: antId,
-        //     hiveId: hiveId
-        //   });
-        // } else {
-        //   tile.seeingBy.push({
-        //     type: TileType.Hive,
-        //     hiveId: hiveId
-        //   });
-        // }
+        if (entity.type === "ant") {
+          tile.seeingBy.set(entity.playerId, {
+            type: TileType.Ant,
+            antId: entity.id,
+            playerId: entity.playerId,
+          });
+        } else {
+          tile.seeingBy.set(entity.playerId, {
+            type: TileType.Hive,
+            hiveId: entity.id,
+            playerId: entity.playerId,
+          });
+        }
       }
     }
     return newTiles;
@@ -98,35 +104,51 @@ export class Game {
   //   return hive.ants;
   // }
 
-  // moveAnt(hiveId: string, antId: string, direction: Direction): boolean {
-  // const hive = this.board.hives.get(hiveId);
-  // const now = Date.now();
-  // if (now - ant.lastMove < 2000) return false; // cooldown
-  // const delta = getDirectionDelta(direction);
-  // const newX = ant.x + delta.x;
-  // const newY = ant.y + delta.y;
-  // if (newX < 0 || newX >= this.board.width || newY < 0 || newY >= this.board.height) return false;
-  // const tile = this.board.tiles[newY][newX];
-  // if (tile.type === TileType.Wall) return false;
-  // // If moving to food and not carrying, pick up
-  // if (tile.type === TileType.Food && !ant.carrying) {
-  //   ant.carrying = true;
-  //   this.board.tiles[newY][newX].setType(TileType.Empty);
-  // }
-  // // // If moving to hive and carrying, drop and spawn new ant
-  // // if (tile.type === TileType.Hive && tile.hive?.uuid === hive.hiveId && ant.carrying) {
-  // //   ant.carrying = false;
-  // //   hive.ants.push(new Ant(hive.x, hive.y));
-  // // }
-  // // Move ant
-  // ant.x = newX;
-  // ant.y = newY;
-  // ant.lastMove = now;
+  moveAnt(playerId: string, antId: string, direction: Direction): Tile[] {
+    const player = this.board.players.get(playerId);
+    if (!player) throw new Error("Player does not exist.");
+    const ant = player.ants.get(antId);
+    if (!ant) throw new Error("Player does not own this ant.");
+    // const hive = this.board.hives.get(hiveId);
+    // const now = Date.now();
+    // if (now - ant.lastMove < 2000) return false; // cooldown
 
-  // // Check collisions
-  // // this.checkCollisions();
-  // return true;
-  // }
+    const delta = getDirectionDelta(direction);
+
+    const newX = ant.x + delta.x;
+    const newY = ant.y + delta.y;
+
+    if (newX < 0 || newX >= this.board.width || newY < 0 || newY >= this.board.height) throw new Error("Cannot walk outside the map.");
+    const tile = this.board.tiles[newY][newX];
+    if (tile.type === TileType.Wall) throw new Error("Cannot walk into a wall.");
+
+    // // If moving to food and not carrying, pick up
+    // if (tile.type === TileType.Food && !ant.carrying) {
+    //   ant.carrying = true;
+    //   this.board.tiles[newY][newX].setType(TileType.Empty);
+    // }
+    // // // If moving to hive and carrying, drop and spawn new ant
+    // // if (tile.type === TileType.Hive && tile.hive?.uuid === hive.hiveId && ant.carrying) {
+    // //   ant.carrying = false;
+    // //   hive.ants.push(new Ant(hive.x, hive.y));
+    // // }
+
+
+    // Move ant
+    ant.x = newX;
+    ant.y = newY;
+
+    tile.type = TileType.Ant;
+    tile.ant = ant;
+
+    const newTiles = this.getVision(ant);
+
+    // ant.lastMove = now;
+
+    // // Check collisions
+    // // this.checkCollisions();
+    return newTiles;
+  }
 
   checkCollisions() {
     // const allAnts: { ant: Ant; hive: Hive; }[] = [];

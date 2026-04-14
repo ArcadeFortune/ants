@@ -8,7 +8,9 @@ export interface Position {
 
 export interface Entity {
   id: string;
+  playerId: string;
   type: "hive" | "ant" | "food";
+  tilesInVision: Tile[];
   x: number;
   y: number;
 }

@@ -1,8 +1,8 @@
-import { Direction } from "node:readline";
 import { HiveDTO } from "./hive.ts";
 import { TileDTO } from "./tile.ts";
 import { AntDTO } from "./ant.ts";
 import { PlayerDTO } from "./player.ts";
+import { Direction } from "./general.ts";
 
 
 interface ServerPlayerInitEvent {

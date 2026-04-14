@@ -1,28 +1,30 @@
 import { generateUUID } from "../utils.ts";
 import { Entity } from "./general.ts";
+import { Tile } from "./tile.ts";
 
 export class Ant implements Entity {
   readonly type = "ant";
   readonly id = generateUUID();
   carrying = false;
   lastMove = 0;
+  tilesInVision: Tile[] = [];
 
   constructor(
-    public hiveId: string,
+    public readonly playerId: string,
     public x: number,
     public y: number,
   ) { }
 }
 
 export class AntDTO {
-  id: string;
-  hiveId: string;
+  readonly id: string;
+  readonly playerId: string;
   x: number;
   y: number;
 
   constructor(ant: Ant) {
     this.id = ant.id;
-    this.hiveId = ant.hiveId;
+    this.playerId = ant.playerId;
     this.x = ant.x;
     this.y = ant.y;
   }

@@ -12,10 +12,11 @@ export enum TileType {
 export type VisionTile = {
   type: TileType.Hive;
   hiveId: string;
+  playerId: string;
 } | {
   type: TileType.Ant;
   antId: string;
-  hiveId: string;
+  playerId: string;
 };
 
 export class TileDTO {
@@ -24,6 +25,7 @@ export class TileDTO {
   y: number;
   hiveId?: string;
   antId?: string;
+  playerId?: string;
 
   constructor(tile: Tile) {
     if (!tile) {
@@ -34,17 +36,17 @@ export class TileDTO {
     this.y = tile.y;
     this.hiveId = tile.hive?.id;
     this.antId = tile.ant?.id;
+    this.playerId = tile.hive?.playerId || tile.ant?.playerId;
   }
 }
 
 export class Tile {
-  seenBy: VisionTile[] = []; // ants/hives that have seen it. will not send tile infos again to these clients. gets cleared upon any modification
-  seeingBy: VisionTile[] = []; // ants/hives that are seeing it. modifying tiletype immediately informs these clients. gets cleared upon moving away
+  seenBy: Map<string, VisionTile> = new Map(); // ants/hives that have seen it. will not send tile infos again to these clients. gets cleared upon any modification
+  seeingBy: Map<string, VisionTile> = new Map(); // ants/hives that are seeing it. modifying tiletype immediately informs these clients. gets cleared upon moving away
   hive?: Hive;
   ant?: Ant;
   //todo: food
   constructor(public type: TileType = TileType.Empty, public x: number, public y: number) { }
-
 
   setType(newType: TileType.Hive, hive: Hive): void;
   setType(newType: Exclude<TileType, TileType.Hive>, hive?: undefined): void;

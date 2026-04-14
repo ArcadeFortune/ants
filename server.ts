@@ -29,29 +29,39 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
     // Accept new connections
     // assign new PlayerSession
     // send InitState todo: one special server message response "ServerPlayerInitEvent"
-    const playerId = generateUUID();
-    const player = game.addPlayer(playerId);
-    const initialHive = player.hives[0];
-    if (!initialHive) return socket.send(serverEvent({ type: "error", body: { code: 500, message: "Something went wrong with the hive creation..." } }));
-    playerSockets.set(playerId, socket);
-    socketPlayers.set(socket, playerId);
-    console.log(`Player ${playerId} connected`);
+    try {
+      const playerId = generateUUID();
+      const player = game.addPlayer(playerId);
+      const initialHive = player.hives[0];
+      if (!initialHive) return socket.send(serverEvent({ type: "error", body: { code: 500, message: "Something went wrong with the hive creation..." } }));
+      playerSockets.set(playerId, socket);
+      socketPlayers.set(socket, playerId);
+      console.log(`Player ${playerId} connected`);
 
-    clients.forEach(s => s.send(serverEvent({
-      type: "join",
-      body: {
-        hiveId: initialHive.id,
-      }
-    })));
-    clients.add(socket);
+      clients.forEach(s => s.send(serverEvent({
+        type: "join",
+        body: {
+          hiveId: initialHive.id,
+        }
+      })));
+      clients.add(socket);
 
-    socket.send(serverEvent({
-      type: "init",
-      body: {
-        you: new PlayerDTO(player),
-        tiles: game.getVision(initialHive, 2).map(t => new TileDTO(t))
-      }
-    }));
+      socket.send(serverEvent({
+        type: "init",
+        body: {
+          you: new PlayerDTO(player),
+          tiles: game.getVision(initialHive, 2).map(t => new TileDTO(t))
+        }
+      }));
+    } catch (e: unknown) {
+      socket.send(serverEvent({
+        type: "error",
+        body: {
+          code: 500,
+          message: e instanceof Error ? e.message : String(e)
+        }
+      }));
+    }
   });
 
   socket.addEventListener("message", (event) => {
@@ -78,6 +88,9 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
         case "move": {
           //TODO; Broadcast per-player vision/updates (only what they should see)
           console.log(`Client wants to move ${message.antId} to ${message.direction}`);
+          const player = socketPlayers.get(socket);
+          if (!player) throw new Error("Player not found.");
+          game.moveAnt(player, message.antId, message.direction);
           // game.moveAnt(message.antId, message.direction);
         }
           break;
@@ -85,12 +98,12 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
           socket.send(JSON.stringify({ type: "error", body: { code: 404, message: `unkown message from client: "${JSON.stringify(message)}"` } }));
         }
       }
-    } catch (e) {
+    } catch (e: unknown) {
       socket.send(JSON.stringify({
         type: "error",
         body: {
           code: 400,
-          message: "Request was not in JSON format: " + e,
+          message: e instanceof Error ? e.message : String(e),
         }
       }));
     }

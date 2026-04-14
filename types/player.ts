@@ -19,9 +19,11 @@ export class Player {
 }
 
 export class PlayerDTO {
+  id: string;
   hives: HiveDTO[];
   ants: AntDTO[];
   constructor(player: Player) {
+    this.id = player.id;
     this.hives = player.hives.map(h => new HiveDTO(h));
     this.ants = player.hives.flatMap(h => h.ants.map(a => new AntDTO(a)));
   }

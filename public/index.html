@@ -11,6 +11,8 @@
       }
 
       .history {
+        height: 80vh;
+        overflow: auto;
         display: flex;
         flex-direction: column-reverse;
 
@@ -24,6 +26,7 @@
 
           legend {
             animation: inherit;
+            mix-blend-mode: normal;
           }
         }
 
@@ -55,6 +58,9 @@
     <h2>Status</h2>
     <div class="status"></div>
 
+    <h2>map</h2>
+    <canvas id="grid" width="350" height="350"></canvas>
+
     <h2>buttons</h2>
     <div class="buttons"></div>
 
@@ -67,6 +73,7 @@
           this.ws = null;
           this.state = {
             myHives: [],
+            myAnts: []
           }
           this.listeners = [];
         }
@@ -107,18 +114,26 @@
               body: msg,
             })
             switch (msg.type) {
+              case "init":
+                this.notify({
+                  type: "renderTiles",
+                  body: msg.body.tiles
+                })
               case "yourHive":
-                this.state.myHives.push(msg.body.hive);
+                const myHiveId = msg.body.you.hives[0].id;
+                const myHive = msg.body.tiles.find(t => t.type === "hive" && t.hiveId === myHiveId);
+                this.state.myHives.push(myHive);
+                this.state.myAnts.push(...msg.body.you.ants);
                 this.notify({
                   type: "playableAnts",
-                  body: this.state.myHives.flatMap(h => h.ants.map(a => a.id)),
+                  body: this.state.myAnts,
                 })
             }
           } catch (e) {
             this.notify({
               type: "error",
-              from: "Server",
-              body: e,
+              from: "Client",
+              body: e.stack ?? e,
             })
           }
         }
@@ -156,6 +171,7 @@
           this.status = document.querySelector(".status")
           this.buttons = document.querySelector(".buttons")
           this.history = document.querySelector(".history")
+          this.viewCanvas = new ViewCanvas();
           if (!this.status || !this.buttons || !this.history) {
             throw new Error("Unable to initialize UI.")
           }
@@ -192,6 +208,7 @@
           const pre = this.el("pre", JSON.stringify(message, null, 2));
           box.appendChild(pre)
           this.history.appendChild(box)
+          box.scrollIntoView({ behavior: "smooth", block: "start", container: "nearest" });
         }
         showConnectUI(connectFn) {
           this.buttons.innerHTML = "";
@@ -205,24 +222,143 @@
           this.buttons.appendChild(pingBtn);
           this.buttons.appendChild(hiveBtn);
         }
-        showAntsUI(allAnts, onMoveFn) {
+        showAntsUI(allAnts, onSelectFn) {
           allAnts.forEach((ant, i) => {
-            const antBtn = this.el("button", `Ant #${i}`, "", { type: "button" }, { onclick: () => onMoveFn(ant, "north") })
+            const antBtn = this.el("button", `Ant #${i}`, "", { type: "button" }, { onclick: () => onSelectFn(ant) })
             this.buttons.append(antBtn)
           })
+        }
+        showMoveUI(onMoveFn) {
+          const nBtn = this.el("button", "North", "", { type: "button" }, { onclick: () => onMoveFn("n") })
+          const neBtn = this.el("button", "North East", "", { type: "button" }, { onclick: () => onMoveFn("ne") })
+          const eBtn = this.el("button", "East", "", { type: "button" }, { onclick: () => onMoveFn("e") })
+          const seBtn = this.el("button", "South East", "", { type: "button" }, { onclick: () => onMoveFn("se") })
+          const sBtn = this.el("button", "South", "", { type: "button" }, { onclick: () => onMoveFn("s") })
+          const swBtn = this.el("button", "South West", "", { type: "button" }, { onclick: () => onMoveFn("sw") })
+          const wBtn = this.el("button", "West", "", { type: "button" }, { onclick: () => onMoveFn("w") })
+          const nwBtn = this.el("button", "North West", "", { type: "button" }, { onclick: () => onMoveFn("nw") })
+          const dirs = this.el("div", "", "directions");
+          dirs.appendChild(nBtn);
+          dirs.appendChild(neBtn);
+          dirs.appendChild(eBtn);
+          dirs.appendChild(seBtn);
+          dirs.appendChild(sBtn);
+          dirs.appendChild(swBtn);
+          dirs.appendChild(wBtn);
+          dirs.appendChild(nwBtn);
+          this.buttons.appendChild(dirs);
         }
         showRetryUI(retryFn) {
           this.buttons.innerHTML = ""
           const retryBtn = this.el("button", "retry", "", { type: "button" }, { onclick: retryFn })
           this.buttons.appendChild(retryBtn);
         }
+        renderTiles(tiles) {
+          this.viewCanvas.setCamera(tiles[0].x - 1, tiles[0].y - 1)
+          this.viewCanvas.drawTiles(tiles);
+        }
+        select(x, y) {
+          this.viewCanvas.selectTile(x, y);
+          this.viewCanvas.drawTiles();
+        }
+      }
+
+      class ViewCanvas {
+        canvas = document.getElementById("grid");
+        ctx = this.canvas.getContext("2d");
+
+        tiles = new Map();
+
+        TILE_SIZE = 50;
+        VIEW_SIZE = 7; // 7x7 tiles visible
+
+        cameraX = 0;
+        cameraY = 0;
+        selectedTile = undefined;
+
+        constructor() { }
+
+        drawTile(tile, screenX, screenY) {
+          switch (tile?.type) {
+            case "empty":
+              this.ctx.fillStyle = "#eee";
+              break;
+            case "wall":
+              this.ctx.fillStyle = "#333";
+              break;
+            case "food":
+              this.ctx.fillStyle = "green";
+              break;
+            case "hive":
+              this.ctx.fillStyle = "gold";
+              break;
+            default:
+              this.ctx.fillStyle = "#ccc"; // unknown tile
+          }
+
+          this.ctx.fillRect(screenX, screenY, this.TILE_SIZE, this.TILE_SIZE);
+          this.ctx.strokeStyle = "#999"; //grid
+          this.ctx.strokeRect(screenX, screenY, this.TILE_SIZE, this.TILE_SIZE);
+        }
+
+        selectTile(x, y) {
+          this.selectedTile = this.tiles.get(`${x},${y}`);
+        }
+        deselectTile() {
+          this.selectedTile = undefined;
+        }
+        setCamera(x, y) {
+          this.cameraX = x;
+          this.cameraY = y;
+        }
+        moveCamera(x, y) {
+          this.setCamera(x, y);
+          this.viewCanvas.drawTiles();
+        }
+
+        drawTiles(tiles = []) {
+          tiles.forEach(t => {
+            this.tiles.set(`${t.x},${t.y}`, t);
+          });
+
+          this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+          for (let y = 0; y < this.VIEW_SIZE; y++) {
+            for (let x = 0; x < this.VIEW_SIZE; x++) {
+              const worldX = this.cameraX + x;
+              const worldY = this.cameraY + y;
+
+              const tile = this.tiles.get(`${worldX},${worldY}`);
+
+              this.drawTile(
+                tile,
+                x * this.TILE_SIZE,
+                y * this.TILE_SIZE
+              );
+
+              if (this.selectedTile) {
+                this.ctx.strokeStyle = "#000";
+                let tmp = this.ctx.lineWidth
+                this.ctx.lineWidth = 2;
+                this.ctx.strokeRect((this.selectedTile.x - this.cameraX) * this.TILE_SIZE, (this.selectedTile.y - this.cameraY) * this.TILE_SIZE, this.TILE_SIZE, this.TILE_SIZE);
+                this.ctx.lineWidth = tmp
+              }
+            }
+          }
+        }
+        unloadTiles(tiles = []) {
+          tiles.forEach(t => {
+            this.tiles.delete(`${t.x},${t.y}`);
+          })
+          this.drawTiles()
+        }
       }
 
       class Controller {
+        selectedEntity;
+
         constructor(model, view) {
           view.showConnectUI(() => model.establishConnection());
           model.subscribe((payload) => {
-            console.log("new type!", payload.type)
             // events from model
             switch (payload.type) {
               case "log":
@@ -250,9 +386,17 @@
                 })
                 break;
               case "playableAnts":
-                view.showAntsUI(payload.body, (ant, direction) => {
-                  model.move(ant, direction);
-                })
+                view.showAntsUI(payload.body, (ant) => {
+                  view.select(ant.x, ant.y)
+                  this.selectedEntity = ant;
+                  view.showMoveUI(dir => {
+                    console.log(`ant ${this.selectedEntity} wants to move to ${dir}`)
+                    game.move(this.selectedEntity.id, dir)
+                  })
+                });
+                break;
+              case "renderTiles":
+                view.renderTiles(payload.body);
                 break;
               default:
                 console.warn(`Unknown command: ${payload.type}`);
