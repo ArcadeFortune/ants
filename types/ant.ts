@@ -1,8 +1,9 @@
 import { generateUUID } from "../utils.ts";
 import { Entity } from "./general.ts";
+import { TileType } from "./tile.ts";
 
 export class Ant implements Entity {
-  readonly type = "ant";
+  readonly type = TileType.Ant;
   readonly id = generateUUID();
   carrying = false;
   lastMove = 0;
@@ -16,6 +17,7 @@ export class Ant implements Entity {
 }
 
 export class AntDTO {
+  readonly type = TileType.Ant;
   readonly id: string;
   readonly playerId: string;
   x: number;

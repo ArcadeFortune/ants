@@ -88,7 +88,15 @@
               type: "connectionSuccessful"
             })
           }
-          this.ws.onmessage = (m) => this.handleMessage(m);
+          this.ws.onmessage = (m) => {
+            const message = JSON.parse(m.data)
+            this.notify({
+              type: "log",
+              from: "Server",
+              body: message,
+            })
+            this.handleMessage(message)
+          };
           this.ws.onerror = (e) => this.notify({
             type: "error",
             from: "Server",
@@ -106,36 +114,54 @@
             },
           });
         }
-        handleMessage(m) {
+        handleMessage(msg = {}) {
           try {
-            const msg = JSON.parse(m.data);
-            this.notify({
-              type: "log",
-              from: "Server",
-              body: msg,
-            })
             switch (msg.type) {
-              case "init":
+              case "multiple": {
+                msg.body.forEach(m => this.handleMessage(m))
+                break;
+              }
+              case "tiles": {
                 this.notify({
                   type: "renderTiles",
                   body: msg.body.tiles
-                })
-              case "yourHive":
-                const myHiveId = msg.body.you.hives[0].id;
-                const myHive = msg.body.tiles.find(t => t.type === "hive" && t.hiveId === myHiveId);
-                this.state.myHives.push(myHive);
-                this.state.myAnts.push(...msg.body.you.ants);
+                });
+                break;
+              }
+              case "playerInfo":
+                this.state.myHives.push(...msg.body.info.hives);
+                this.state.myAnts.push(...msg.body.info.ants);
                 this.notify({
                   type: "playableAnts",
                   body: this.state.myAnts,
+                });
+                break;
+              case "yourAntMoved": {
+                const ant = msg.body.ant
+                const movedAnt = this.state.myAnts.findIndex(a => a.id === ant.id);
+                if (movedAnt === -1) throw new Error("Server told me I moved an ant I didn't own.");
+                const oldAnt = this.state.myAnts.splice(movedAnt, 1);
+                this.state.myAnts.push(ant);
+
+                const newTiles = []; //updated ant tile + previous tile reverted
+
+                this.notify({
+                  type: "renderTiles",
+                  body: [{ type: "ant", x: ant.x, y: ant.y }],
                 })
+                this.notify({
+                  type: "select",
+                  body: ant,
+                })
+                break;
+              }
+              default: {
+                console.log("unknown type:", msg.type)
+                break;
+              }
             }
           } catch (e) {
-            this.notify({
-              type: "error",
-              from: "Client",
-              body: e.stack ?? e,
-            })
+            console.error(e)
           }
         }
         subscribe(listener) {
@@ -255,8 +281,10 @@
           this.buttons.appendChild(retryBtn);
         }
         renderTiles(tiles) {
-          this.viewCanvas.setCamera(tiles[0].x - 1, tiles[0].y - 1)
           this.viewCanvas.drawTiles(tiles);
+        }
+        centerCamera(x, y) {
+          this.viewCanvas.moveCamera(x - Math.floor(this.viewCanvas.VIEW_SIZE / 2), y - Math.floor(this.viewCanvas.VIEW_SIZE / 2))
         }
         select(x, y) {
           this.viewCanvas.selectTile(x, y);
@@ -279,6 +307,23 @@
 
         constructor() { }
 
+        selectTile(x, y) {
+          this.selectedTile = this.tiles.get(`${x},${y}`);
+        }
+
+        deselectTile() {
+          this.selectedTile = undefined;
+        }
+        setCamera(x, y) {
+          console.log('x, y --->', x, y);
+          this.cameraX = x;
+          this.cameraY = y;
+        }
+        moveCamera(x, y) {
+          this.setCamera(x, y);
+          this.drawTiles();
+        }
+
         drawTile(tile, screenX, screenY) {
           switch (tile?.type) {
             case "empty":
@@ -293,28 +338,17 @@
             case "hive":
               this.ctx.fillStyle = "gold";
               break;
+            case "ant":
+              this.ctx.fillStyle = "saddlebrown";
+              break;
             default:
               this.ctx.fillStyle = "#ccc"; // unknown tile
+              break;
           }
 
           this.ctx.fillRect(screenX, screenY, this.TILE_SIZE, this.TILE_SIZE);
           this.ctx.strokeStyle = "#999"; //grid
           this.ctx.strokeRect(screenX, screenY, this.TILE_SIZE, this.TILE_SIZE);
-        }
-
-        selectTile(x, y) {
-          this.selectedTile = this.tiles.get(`${x},${y}`);
-        }
-        deselectTile() {
-          this.selectedTile = undefined;
-        }
-        setCamera(x, y) {
-          this.cameraX = x;
-          this.cameraY = y;
-        }
-        moveCamera(x, y) {
-          this.setCamera(x, y);
-          this.viewCanvas.drawTiles();
         }
 
         drawTiles(tiles = []) {
@@ -391,14 +425,21 @@
                   view.select(ant.x, ant.y)
                   this.selectedEntity = ant;
                   view.showMoveUI(dir => {
-                    console.log(`ant ${this.selectedEntity} wants to move to ${dir}`)
                     game.move(this.selectedEntity.id, dir)
-                  })
+                  });
                 });
+                const ant = payload.body[0];
+                view.centerCamera(ant.x, ant.y);
                 break;
               case "renderTiles":
                 view.renderTiles(payload.body);
                 break;
+              case "select": {
+                view.selectedEntity = payload.body;
+                view.select(payload.body.x, payload.body.y)
+                view.centerCamera(payload.body.x, payload.body.y)
+                break;
+              }
               default:
                 console.warn(`Unknown command: ${payload.type}`);
             }

@@ -1,5 +1,5 @@
 import { Player } from "./player.ts";
-import { Tile } from "./tile.ts";
+import { Tile, TileType } from "./tile.ts";
 
 export interface Position {
   x: number;
@@ -9,7 +9,7 @@ export interface Position {
 export interface Entity {
   id: string;
   playerId: string;
-  type: "hive" | "ant" | "food";
+  type: TileType;
   tilesInVision: Set<string>; // x,y eg. 12,34
   x: number;
   y: number;

@@ -1,4 +1,5 @@
 import { Game } from "./game.ts";
+import { AntDTO } from "./types/ant.ts";
 import { ClientMessage, serverEvent, ServerEvent } from "./types/comms.ts";
 import { PlayerDTO } from "./types/player.ts";
 import { TileDTO } from "./types/tile.ts";
@@ -47,11 +48,21 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
       clients.add(socket);
 
       socket.send(serverEvent({
-        type: "init",
-        body: {
-          you: new PlayerDTO(player),
-          tiles: game.getVision(initialHive, 2).map(t => new TileDTO(t))
-        }
+        type: "multiple",
+        body: [
+          {
+            type: "playerInfo",
+            body: {
+              info: new PlayerDTO(player)
+            }
+          },
+          {
+            type: "tiles",
+            body: {
+              tiles: game.getVision(initialHive, 2).map(t => new TileDTO(t))
+            }
+          },
+        ]
       }));
     } catch (e: unknown) {
       socket.send(serverEvent({
@@ -76,22 +87,29 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
           socket.send(JSON.stringify({ type: "pong" }));
           break;
         }
-        // case "whoami": {
-        //   socket.send(JSON.stringify({
-        //     type: "yourHive",
-        //     body: {
-        //       hive: game.getHive(socketPlayers.get(socket))
-        //     },
-        //   }));
-        //   break;
-        // }
         case "move": {
           //TODO; Broadcast per-player vision/updates (only what they should see)
           console.log(`Client wants to move ${message.antId} to ${message.direction}`);
           const player = socketPlayers.get(socket);
           if (!player) throw new Error("Player not found.");
-          game.moveAnt(player, message.antId, message.direction);
-          // game.moveAnt(message.antId, message.direction);
+          const ant = game.moveAnt(player, message.antId, message.direction);
+          socket.send(serverEvent({
+            type: "multiple",
+            body: [
+              {
+                type: "yourAntMoved",
+                body: {
+                  ant: new AntDTO(ant)
+                }
+              },
+              {
+                type: "tiles",
+                body: {
+                  tiles: game.getVision(ant),
+                }
+              }
+            ]
+          }));
         }
           break;
         default: {

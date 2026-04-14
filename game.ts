@@ -2,6 +2,7 @@ import { Tile, TileType, generateTiles } from "./types/tile.ts";
 import { findRandomEmptyPosition, getDirectionDelta } from "./utils.ts";
 import { Board, Direction, Entity } from "./types/general.ts";
 import { Player } from "./types/player.ts";
+import { Ant } from "./types/ant.ts";
 
 export class Game {
   board: Board;
@@ -33,6 +34,7 @@ export class Game {
     const player = new Player(playerId, pos.x, pos.y);
     this.board.players.set(player.id, player);
     this.board.tiles[pos.y][pos.x].setType(TileType.Hive, player.hives[0]);
+    player.ants.forEach(a => this.getVision(a));
     return player;
   }
 
@@ -61,7 +63,7 @@ export class Game {
     //todo: new ants spawning in a hive should go through this function to have the tiles register that this ant is looking at it.
     const oldTilesInVision = new Set(entity.tilesInVision);
     const newTiles: Tile[] = [];
-    const allTiles: Tile[] = [];
+    const previousTilesInVision: Set<string> = new Set();
     for (let dy = -radius; dy <= radius; dy++) {
       for (let dx = -radius; dx <= radius; dx++) {
         const x = entity.x + dx;
@@ -69,16 +71,25 @@ export class Game {
         const tile = this.board.tiles[y][x];
 
         if (tile.seeingBy.find(e => e.id === entity.id)) {
-          allTiles.push(tile);
+          previousTilesInVision.add(`${tile.x},${tile.y}`);
         } else {
           newTiles.push(tile);
           tile.seeingBy.push(entity);
+          entity.tilesInVision.add(`${tile.x},${tile.y}`);
         }
       }
     }
-    console.log('oldTilesInVision --->', oldTilesInVision);
-    console.log('newTiles --->', newTiles);
-    console.log('allTiles --->', allTiles);
+    for (const tile of oldTilesInVision) {
+      if (previousTilesInVision.has(tile)) {
+        //tile still in vision
+      } else {
+        //old tiles not in vision anymore
+        const [x, y] = tile.split(",").map(Number);
+        const tileNotInVision = this.board.tiles[y][x];
+        const index = tileNotInVision.seeingBy.indexOf(entity);
+        tileNotInVision.seeingBy.splice(index, 1);
+      }
+    }
     return newTiles;
   }
 
@@ -99,7 +110,7 @@ export class Game {
   //   return hive.ants;
   // }
 
-  moveAnt(playerId: string, antId: string, direction: Direction): Tile[] {
+  moveAnt(playerId: string, antId: string, direction: Direction): Ant {
     const player = this.board.players.get(playerId);
     if (!player) throw new Error("Player does not exist.");
     const ant = player.ants.find(a => a.id === antId);
@@ -136,13 +147,11 @@ export class Game {
     tile.type = TileType.Ant;
     tile.ant = ant;
 
-    const newTiles = this.getVision(ant);
-
     // ant.lastMove = now;
 
     // // Check collisions
     // // this.checkCollisions();
-    return newTiles;
+    return ant;
   }
 
   checkCollisions() {

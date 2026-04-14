@@ -2,6 +2,32 @@ import { Ant } from "./ant.ts";
 import { Entity } from "./general.ts";
 import { Hive } from "./hive.ts";
 
+export class Tile {
+  seenBy: Map<string, VisionTile> = new Map(); // ants/hives that have seen it. will not send tile infos again to these clients. gets cleared upon any modification
+  // seeingBy: Map<string, VisionTile> = new Map(); // ants/hives that are seeing it. modifying tiletype immediately informs these clients. gets cleared upon moving away
+  seeingBy: Entity[] = []; // ants/hives that are seeing it. modifying tiletype immediately informs these clients. gets cleared upon moving away
+  hive?: Hive;
+  ant?: Ant;
+  //todo: food
+  constructor(public type: TileType = TileType.Empty, public x: number, public y: number) { }
+
+  setType(newType: TileType.Hive, hive: Hive): void;
+  setType(newType: Exclude<TileType, TileType.Hive>, hive?: undefined): void;
+  setType(newType: TileType, hive?: Hive) {
+    if (newType === TileType.Hive && !hive) {
+      throw new Error("Hive data is required for Hive tiles");
+    }
+
+    if (hive && newType !== TileType.Hive) {
+      throw new Error("Cannot apply UUID to a non-hive tile");
+    }
+
+    this.type = newType;
+    this.hive = hive;
+    // this.seenBy.clear(); //todo: inform these clients of new tile
+  }
+}
+
 export enum TileType {
   Empty = "empty",
   Hive = "hive",
@@ -38,32 +64,6 @@ export class TileDTO {
     this.hiveId = tile.hive?.id;
     this.antId = tile.ant?.id;
     this.playerId = tile.hive?.playerId || tile.ant?.playerId;
-  }
-}
-
-export class Tile {
-  seenBy: Map<string, VisionTile> = new Map(); // ants/hives that have seen it. will not send tile infos again to these clients. gets cleared upon any modification
-  // seeingBy: Map<string, VisionTile> = new Map(); // ants/hives that are seeing it. modifying tiletype immediately informs these clients. gets cleared upon moving away
-  seeingBy: Entity[] = []; // ants/hives that are seeing it. modifying tiletype immediately informs these clients. gets cleared upon moving away
-  hive?: Hive;
-  ant?: Ant;
-  //todo: food
-  constructor(public type: TileType = TileType.Empty, public x: number, public y: number) { }
-
-  setType(newType: TileType.Hive, hive: Hive): void;
-  setType(newType: Exclude<TileType, TileType.Hive>, hive?: undefined): void;
-  setType(newType: TileType, hive?: Hive) {
-    if (newType === TileType.Hive && !hive) {
-      throw new Error("Hive data is required for Hive tiles");
-    }
-
-    if (hive && newType !== TileType.Hive) {
-      throw new Error("Cannot apply UUID to a non-hive tile");
-    }
-
-    this.type = newType;
-    this.hive = hive;
-    // this.seenBy.clear(); //todo: inform these clients of new tile
   }
 }
 

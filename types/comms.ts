@@ -1,15 +1,13 @@
-import { HiveDTO } from "./hive.ts";
 import { TileDTO } from "./tile.ts";
 import { AntDTO } from "./ant.ts";
 import { PlayerDTO } from "./player.ts";
 import { Direction } from "./general.ts";
 
 
-interface ServerPlayerInitEvent {
-  type: "init";
+interface ServerPlayerInfoEvent {
+  type: "playerInfo";
   body: {
-    you: PlayerDTO;
-    tiles: TileDTO[];
+    info: PlayerDTO;
   };
 }
 
@@ -34,12 +32,10 @@ interface ServerTilesEvent {
   };
 }
 
-interface ServerYourIdentityEvent {
-  type: "yourIdentity";
+interface ServerOwnAntMovedEvent {
+  type: "yourAntMoved";
   body: {
-    playerId: string;
-    hive: HiveDTO;
-    ants: AntDTO[];
+    ant: AntDTO;
   };
 }
 
@@ -51,9 +47,13 @@ interface ServerErrorEvent {
   };
 }
 
-export type ServerEvent = ServerPlayerInitEvent | ServerJoinEvent | ServerLeaveEvent | ServerTilesEvent | ServerYourIdentityEvent | ServerErrorEvent;
+export type ServerEvent = ServerPlayerInfoEvent | ServerJoinEvent | ServerLeaveEvent | ServerTilesEvent | ServerOwnAntMovedEvent | ServerErrorEvent;
+export type ServerEvents = {
+  type: "multiple";
+  body: ServerEvent[];
+};
 
-export function serverEvent(e: ServerEvent): string {
+export function serverEvent(e: ServerEvent | ServerEvents): string {
   return JSON.stringify(e);
 }
 
