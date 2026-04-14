@@ -10,7 +10,7 @@ export interface Entity {
   id: string;
   playerId: string;
   type: "hive" | "ant" | "food";
-  tilesInVision: Tile[];
+  tilesInVision: Set<string>; // x,y eg. 12,34
   x: number;
   y: number;
 }

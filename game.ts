@@ -32,7 +32,6 @@ export class Game {
     if (!pos) throw new Error("No empty position for hive");
     const player = new Player(playerId, pos.x, pos.y);
     this.board.players.set(player.id, player);
-
     this.board.tiles[pos.y][pos.x].setType(TileType.Hive, player.hives[0]);
     return player;
   }
@@ -59,31 +58,27 @@ export class Game {
    * @returns new tiles affected
    */
   getVision(entity: Entity, radius: number = 2) {
+    //todo: new ants spawning in a hive should go through this function to have the tiles register that this ant is looking at it.
+    const oldTilesInVision = new Set(entity.tilesInVision);
     const newTiles: Tile[] = [];
+    const allTiles: Tile[] = [];
     for (let dy = -radius; dy <= radius; dy++) {
       for (let dx = -radius; dx <= radius; dx++) {
         const x = entity.x + dx;
         const y = entity.y + dy;
         const tile = this.board.tiles[y][x];
 
-        if (tile.seeingBy.has(entity.playerId)) continue;
-        newTiles.push(tile);
-
-        if (entity.type === "ant") {
-          tile.seeingBy.set(entity.playerId, {
-            type: TileType.Ant,
-            antId: entity.id,
-            playerId: entity.playerId,
-          });
+        if (tile.seeingBy.find(e => e.id === entity.id)) {
+          allTiles.push(tile);
         } else {
-          tile.seeingBy.set(entity.playerId, {
-            type: TileType.Hive,
-            hiveId: entity.id,
-            playerId: entity.playerId,
-          });
+          newTiles.push(tile);
+          tile.seeingBy.push(entity);
         }
       }
     }
+    console.log('oldTilesInVision --->', oldTilesInVision);
+    console.log('newTiles --->', newTiles);
+    console.log('allTiles --->', allTiles);
     return newTiles;
   }
 
@@ -107,7 +102,7 @@ export class Game {
   moveAnt(playerId: string, antId: string, direction: Direction): Tile[] {
     const player = this.board.players.get(playerId);
     if (!player) throw new Error("Player does not exist.");
-    const ant = player.ants.get(antId);
+    const ant = player.ants.find(a => a.id === antId);
     if (!ant) throw new Error("Player does not own this ant.");
     // const hive = this.board.hives.get(hiveId);
     // const now = Date.now();

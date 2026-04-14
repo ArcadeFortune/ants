@@ -1,15 +1,11 @@
 import { generateUUID } from "../utils.ts";
-import { Ant } from "./ant.ts";
 import { Entity } from "./general.ts";
-import { Tile } from "./tile.ts";
 
 export class Hive implements Entity {
   readonly type = "hive";
   readonly id: string = generateUUID();
-  ants: Ant[] = [];
-  tilesInVision: Tile[] = [];
+  tilesInVision: Set<string> = new Set();
   constructor(public playerId: string, public x: number, public y: number) {
-    this.ants.push(...[new Ant(playerId, x, y), new Ant(playerId, x, y)]);
   }
 }
 

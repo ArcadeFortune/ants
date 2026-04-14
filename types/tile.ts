@@ -1,4 +1,5 @@
 import { Ant } from "./ant.ts";
+import { Entity } from "./general.ts";
 import { Hive } from "./hive.ts";
 
 export enum TileType {
@@ -42,7 +43,8 @@ export class TileDTO {
 
 export class Tile {
   seenBy: Map<string, VisionTile> = new Map(); // ants/hives that have seen it. will not send tile infos again to these clients. gets cleared upon any modification
-  seeingBy: Map<string, VisionTile> = new Map(); // ants/hives that are seeing it. modifying tiletype immediately informs these clients. gets cleared upon moving away
+  // seeingBy: Map<string, VisionTile> = new Map(); // ants/hives that are seeing it. modifying tiletype immediately informs these clients. gets cleared upon moving away
+  seeingBy: Entity[] = []; // ants/hives that are seeing it. modifying tiletype immediately informs these clients. gets cleared upon moving away
   hive?: Hive;
   ant?: Ant;
   //todo: food

@@ -1,13 +1,12 @@
 import { generateUUID } from "../utils.ts";
 import { Entity } from "./general.ts";
-import { Tile } from "./tile.ts";
 
 export class Ant implements Entity {
   readonly type = "ant";
   readonly id = generateUUID();
   carrying = false;
   lastMove = 0;
-  tilesInVision: Tile[] = [];
+  tilesInVision: Set<string> = new Set();
 
   constructor(
     public readonly playerId: string,
