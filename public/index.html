@@ -60,7 +60,7 @@
     <div class="status"></div>
 
     <h2>map</h2>
-    <canvas id="grid" width="350" height="350"></canvas>
+    <canvas id="map" width="350" height="350"></canvas>
 
     <h2>buttons</h2>
     <div class="buttons"></div>
@@ -68,6 +68,7 @@
     <h2>history</h2>
     <div class="history"></div>
 
+    <script src="./scripts/main.ts"></script>
     <script>
       class Model {
         constructor() {
@@ -293,7 +294,7 @@
       }
 
       class ViewCanvas {
-        canvas = document.getElementById("grid");
+        canvas = document.getElementById("map");
         ctx = this.canvas.getContext("2d");
 
         tiles = new Map();
@@ -303,7 +304,7 @@
 
         cameraX = 0;
         cameraY = 0;
-        selectedTile = undefined;
+        // selectedTile = undefined;
 
         constructor() { }
 
@@ -314,8 +315,8 @@
         deselectTile() {
           this.selectedTile = undefined;
         }
+
         setCamera(x, y) {
-          console.log('x, y --->', x, y);
           this.cameraX = x;
           this.cameraY = y;
         }

@@ -3,7 +3,6 @@ import { AntDTO } from "./ant.ts";
 import { PlayerDTO } from "./player.ts";
 import { Direction } from "./general.ts";
 
-
 interface ServerPlayerInfoEvent {
   type: "playerInfo";
   body: {
@@ -47,16 +46,16 @@ interface ServerErrorEvent {
   };
 }
 
-export type ServerEvent = ServerPlayerInfoEvent | ServerJoinEvent | ServerLeaveEvent | ServerTilesEvent | ServerOwnAntMovedEvent | ServerErrorEvent;
-export type ServerEvents = {
+interface ServerMultipleEvents {
   type: "multiple";
-  body: ServerEvent[];
-};
-
-export function serverEvent(e: ServerEvent | ServerEvents): string {
-  return JSON.stringify(e);
+  body: Exclude<ServerEvent, ServerMultipleEvents>[];
 }
 
+export type ServerEvent = ServerMultipleEvents | ServerPlayerInfoEvent | ServerJoinEvent | ServerLeaveEvent | ServerTilesEvent | ServerOwnAntMovedEvent | ServerErrorEvent;
+
+export function serverEvent(e: ServerEvent): string {
+  return JSON.stringify(e);
+}
 
 interface ClientPingMessage {
   type: "ping";

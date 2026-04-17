@@ -1,0 +1,17 @@
+{
+  "version": "5",
+  "specifiers": {
+    "jsr:@std/async@*": "1.2.0",
+    "jsr:@std/async@^1.2.0": "1.2.0"
+  },
+  "jsr": {
+    "@std/async@1.2.0": {
+      "integrity": "c059c6f6d95ca7cc012ae8e8d7164d1697113d54b0b679e4372b354b11c2dee5"
+    }
+  },
+  "workspace": {
+    "dependencies": [
+      "jsr:@std/async@^1.2.0"
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "imports": {
+    "@std/async": "jsr:@std/async@^1.2.0"
+  },
+  "compilerOptions": {
+    "lib": ["dom", "dom.iterable", "es2020", "deno.ns", "deno.unstable"]
+  },
+  "tasks": {
+    "dev": "deno --env-file --unstable-bundle --watch --watch-exclude='.*/**/' -A ./server.ts"
+  },
+  "fmt": {
+    "lineWidth": 2000
+  }
+}

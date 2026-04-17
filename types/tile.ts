@@ -9,7 +9,7 @@ export class Tile {
   hive?: Hive;
   ant?: Ant;
   //todo: food
-  constructor(public type: TileType = TileType.Empty, public x: number, public y: number) { }
+  constructor(public type: TileType = TileType.Empty, public x: number, public y: number) {}
 
   setType(newType: TileType.Hive, hive: Hive): void;
   setType(newType: Exclude<TileType, TileType.Hive>, hive?: undefined): void;
@@ -34,6 +34,7 @@ export enum TileType {
   Ant = "ant",
   Food = "food",
   Wall = "wall",
+  Unknown = "unknown",
 }
 
 export type VisionTile = {
