@@ -68,7 +68,6 @@
     <h2>history</h2>
     <div class="history"></div>
 
-    <script src="./scripts/main.ts"></script>
     <script>
       class Model {
         constructor() {
@@ -130,8 +129,8 @@
                 break;
               }
               case "playerInfo":
-                this.state.myHives.push(...msg.body.info.hives);
-                this.state.myAnts.push(...msg.body.info.ants);
+                this.state.myHives.push(...msg.body.hives);
+                this.state.myAnts.push(...msg.body.ants);
                 this.notify({
                   type: "playableAnts",
                   body: this.state.myAnts,
@@ -448,10 +447,11 @@
         }
       }
 
-      const game = new Model();
-      const display = new View();
-      const manager = new Controller(game, display)
+      // const game = new Model();
+      // const display = new View();
+      // const manager = new Controller(game, display)
     </script>
+    <script src="./scripts/main.ts"></script>
   </body>
 
 </html>

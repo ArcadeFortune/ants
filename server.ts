@@ -81,9 +81,7 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
         body: [
           {
             type: "playerInfo",
-            body: {
-              info: new PlayerDTO(player),
-            },
+            body: new PlayerDTO(player),
           },
           {
             type: "tiles",

@@ -1,24 +1,5 @@
-# Game structure
+# Game structure & mechanics
 
-Every player has:
-  its own ID.
-  //Every player starts with one hive.
+Players have ants and hives Both are entities. Each have unique IDs and owner ID.
 
-Every Hive has:
-  its own ID.
-  One playerID max
-
-Every Ant has:
-  its own ID.
-  One Hive ID max
-  has list of tiles it is currently viewing.
-  when it is in a hive, this list is empty
-
-
-## V2:
-
-Players have ants and hives
-Both are entities.
-Each have unique IDs and owner ID.
-
-
+A Hive can contain a list of ant IDs, If an ant walks into a hive of the same owner, the Ant disappears from the map and gets added to the list of Ant IDs of the hive.

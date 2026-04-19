@@ -1,9 +1,12 @@
+import { EntityDTO } from "../../types/Entity.ts";
 import { TileDTO } from "../../types/tile.ts";
 
 export interface AppEvent {
   clientConnected: undefined;
   clientError: string;
   gameStoreTiles: TileDTO[];
+  gameStoreEntities: EntityDTO[];
+  gameStoreOwnPlayerId: string;
   rendererMoveCamera: { x: number; y: number };
 }
 
@@ -18,7 +21,7 @@ export class EventBus<E extends AppEvent = AppEvent> {
   }
 
   emit<K extends keyof E>(type: K, payload: E[K]) {
-    console.debug("New Event %s with payload: %o", type, payload);
+    console.debug("[New Event]: %s, %o", type, payload);
     this.listeners[type]?.forEach((l) => l(payload));
   }
 }

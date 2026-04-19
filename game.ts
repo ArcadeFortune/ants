@@ -1,6 +1,7 @@
-import { Tile, TileType, generateTiles } from "./types/tile.ts";
+import { generateTiles, Tile, TileType } from "./types/tile.ts";
 import { findRandomEmptyPosition, getDirectionDelta } from "./utils.ts";
-import { Board, Direction, Entity } from "./types/general.ts";
+import { Board, Direction } from "./types/general.ts";
+import { Entity } from "./types/entity.ts";
 import { Player } from "./types/player.ts";
 import { Ant } from "./types/ant.ts";
 
@@ -34,7 +35,7 @@ export class Game {
     const player = new Player(playerId, pos.x, pos.y);
     this.board.players.set(player.id, player);
     this.board.tiles[pos.y][pos.x].setType(TileType.Hive, player.hives[0]);
-    player.ants.forEach(a => this.getVision(a));
+    player.ants.forEach((a) => this.getVision(a));
     return player;
   }
 
@@ -70,7 +71,7 @@ export class Game {
         const y = entity.y + dy;
         const tile = this.board.tiles[y][x];
 
-        if (tile.seeingBy.find(e => e.id === entity.id)) {
+        if (tile.seeingBy.find((e) => e.id === entity.id)) {
           previousTilesInVision.add(`${tile.x},${tile.y}`);
         } else {
           newTiles.push(tile);
@@ -113,7 +114,7 @@ export class Game {
   moveAnt(playerId: string, antId: string, direction: Direction): Ant {
     const player = this.board.players.get(playerId);
     if (!player) throw new Error("Player does not exist.");
-    const ant = player.ants.find(a => a.id === antId);
+    const ant = player.ants.find((a) => a.id === antId);
     if (!ant) throw new Error("Player does not own this ant.");
     // const hive = this.board.hives.get(hiveId);
     // const now = Date.now();
@@ -138,7 +139,6 @@ export class Game {
     // //   ant.carrying = false;
     // //   hive.ants.push(new Ant(hive.x, hive.y));
     // // }
-
 
     // Move ant
     ant.x = newX;

@@ -39,6 +39,14 @@ export class Client {
         this.bus.emit("gameStoreTiles", message.body.tiles);
         break;
       }
+      case "playerInfo": {
+        const playerId = message.body.id;
+        const ants = message.body.ants;
+        const hives = message.body.hives;
+        this.bus.emit("gameStoreEntities", [...ants, ...hives]);
+        this.bus.emit("gameStoreOwnPlayerId", playerId);
+        break;
+      }
     }
   }
 

@@ -1,6 +1,25 @@
 import { Ant } from "./ant.ts";
-import { Entity } from "./general.ts";
+import { Entity } from "./entity.ts";
 import { Hive } from "./hive.ts";
+
+export enum TileType {
+  Empty = "empty",
+  Hive = "hive",
+  Ant = "ant",
+  Food = "food",
+  Wall = "wall",
+  Unknown = "unknown",
+}
+
+export type VisionTile = {
+  type: TileType.Hive;
+  hiveId: string;
+  playerId: string;
+} | {
+  type: TileType.Ant;
+  antId: string;
+  playerId: string;
+};
 
 export class Tile {
   seenBy: Map<string, VisionTile> = new Map(); // ants/hives that have seen it. will not send tile infos again to these clients. gets cleared upon any modification
@@ -28,31 +47,13 @@ export class Tile {
   }
 }
 
-export enum TileType {
-  Empty = "empty",
-  Hive = "hive",
-  Ant = "ant",
-  Food = "food",
-  Wall = "wall",
-  Unknown = "unknown",
-}
-
-export type VisionTile = {
-  type: TileType.Hive;
-  hiveId: string;
-  playerId: string;
-} | {
-  type: TileType.Ant;
-  antId: string;
-  playerId: string;
-};
-
 export class TileDTO {
   type: TileType;
   x: number;
   y: number;
   hiveId?: string;
   antId?: string;
+  antIds?: string[];
   playerId?: string;
 
   constructor(tile: Tile) {
@@ -63,6 +64,7 @@ export class TileDTO {
     this.x = tile.x;
     this.y = tile.y;
     this.hiveId = tile.hive?.id;
+    this.antIds = tile.hive?.antIds;
     this.antId = tile.ant?.id;
     this.playerId = tile.hive?.playerId || tile.ant?.playerId;
   }

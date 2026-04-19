@@ -5,9 +5,7 @@ import { Direction } from "./general.ts";
 
 interface ServerPlayerInfoEvent {
   type: "playerInfo";
-  body: {
-    info: PlayerDTO;
-  };
+  body: PlayerDTO;
 }
 
 interface ServerJoinEvent {

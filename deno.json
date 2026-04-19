@@ -1,6 +1,7 @@
 {
   "imports": {
-    "@std/async": "jsr:@std/async@^1.2.0"
+    "@std/async": "jsr:@std/async@^1.2.0",
+    "@std/path": "jsr:@std/path@^1.1.4"
   },
   "compilerOptions": {
     "lib": ["dom", "dom.iterable", "es2020", "deno.ns", "deno.unstable"]

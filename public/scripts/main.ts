@@ -10,8 +10,8 @@ function main() {
   const game = new GameStore(eventBus);
   const renderer = new Renderer(eventBus, game);
 
-  // client.connect();
-  // renderer.render();
+  client.connect();
+  renderer.render();
 }
 
 document.addEventListener("DOMContentLoaded", main);

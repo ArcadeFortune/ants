@@ -1,4 +1,4 @@
-import { Tile, TileDTO, TileType } from "../../types/tile.ts";
+import { TileDTO, TileType } from "../../types/tile.ts";
 import { EventBus } from "./event-bus.ts";
 
 export class GameStore {
@@ -37,7 +37,6 @@ export class GameStore {
   }
 
   getTile(x: number, y: number) {
-    console.log({ x, y });
     return this.tiles.get(this.coordsToId(x, y)) ?? { type: TileType.Unknown, x, y };
   }
 }

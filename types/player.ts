@@ -3,12 +3,10 @@ import { Ant, AntDTO } from "./ant.ts";
 import { Hive, HiveDTO } from "./hive.ts";
 
 export class Player {
-  hives: Hive[] = [];
-  ants: Ant[] = []; //shortcut
+  hives: Hive[];
+  ants: Ant[] = [];
   constructor(public id: string = generateUUID(), x: number, y: number) {
-    const hive = new Hive(id, x, y);
-    this.hives.push(hive);
-    this.ants.push(...[new Ant(id, x, y), new Ant(id, x, y)]);
+    this.hives = [new Hive(id, x, y)];
   }
 
   clear() {
@@ -23,7 +21,7 @@ export class PlayerDTO {
   ants: AntDTO[];
   constructor(player: Player) {
     this.id = player.id;
-    this.hives = player.hives.map(h => new HiveDTO(h));
-    this.ants = player.ants.map(a => new AntDTO(a));
+    this.hives = player.hives.map((h) => new HiveDTO(h));
+    this.ants = player.ants.map((a) => new AntDTO(a));
   }
 }

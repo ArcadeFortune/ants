@@ -1,5 +1,5 @@
 import { Player } from "./player.ts";
-import { Tile, TileType } from "./tile.ts";
+import { Tile } from "./tile.ts";
 
 export enum Loglevel {
   Critical = 1,
@@ -10,15 +10,6 @@ export enum Loglevel {
 }
 
 export interface Position {
-  x: number;
-  y: number;
-}
-
-export interface Entity {
-  id: string;
-  playerId: string;
-  type: TileType;
-  tilesInVision: Set<string>; // x,y eg. 12,34
   x: number;
   y: number;
 }
