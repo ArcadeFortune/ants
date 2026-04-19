@@ -1,3 +1,4 @@
+import * as path from "@std/path";
 import { Game } from "./game.ts";
 import { AntDTO } from "./types/ant.ts";
 import { ClientMessage, ServerEvent, serverEvent } from "./types/comms.ts";
@@ -8,7 +9,6 @@ import { generateUUID } from "./utils.ts";
 import { debounce } from "@std/async";
 
 const loglevel: Loglevel = (Number(Deno.env.get("LOGLEVEL")) ?? Loglevel.Warning) as Loglevel;
-
 const port = 8080;
 const game = new Game();
 const playerSockets = new Map<string, WebSocket>();
@@ -22,7 +22,7 @@ const buildFrontend = debounce(async (event?: Deno.FsEvent) => {
   try {
     files = await Deno.bundle({
       entrypoints: ["./public/index.html"],
-      outputDir: ".",
+      outputDir: "./public",
       write: false,
       platform: "browser",
       minify: loglevel < 5,
@@ -37,14 +37,17 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
     try {
       const url = new URL(req.url);
       let filepath = decodeURIComponent(url.pathname);
-      if (filepath === "/" || filepath === "") filepath = "/index.html";
+      if (filepath === "/" || filepath === "") filepath = "index.html";
+      filepath = path.join(Deno.cwd(), "public", filepath);
+
       //serve from memory
-      const memoryFile = files?.outputFiles?.find((f) => f.path === Deno.cwd() + filepath);
+      const memoryFile = files?.outputFiles?.find((f) => f.path === filepath);
       if (memoryFile && memoryFile.contents) return new Response(memoryFile.contents);
       //else serve from ./public
-      const file = await Deno.open("./public" + filepath, { read: true });
+      const file = await Deno.open(filepath, { read: true });
       return new Response(file.readable);
-    } catch {
+    } catch (e) {
+      console.error("Error finding file: ", e instanceof Error ? e.message : String(e));
       return new Response("Not found", { status: 404 });
     }
   }
