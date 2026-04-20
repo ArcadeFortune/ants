@@ -1,6 +1,5 @@
 import { generateUUID } from "../utils.ts";
-import { EntityDTO } from "./Entity.ts";
-import { Entity } from "./entity.ts";
+import { Entity, EntityDTO } from "./entity.ts";
 import { TileType } from "./tile.ts";
 
 export class Ant implements Entity {
