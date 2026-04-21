@@ -1,18 +1,6 @@
-import { TileType } from "./tile.ts";
+import { Ant, AntDTO } from "./ant.ts";
+import { Hive, HiveDTO } from "./hive.ts";
 
-export interface Entity {
-  id: string;
-  playerId: string;
-  type: TileType;
-  tilesInVision: Set<string>; // x,y eg. 12,34
-  x: number;
-  y: number;
-}
+export type Entity = Hive | Ant;
 
-export interface EntityDTO {
-  id: string;
-  playerId: string;
-  type: TileType;
-  x: number;
-  y: number;
-}
+export type EntityDTO = HiveDTO | AntDTO;

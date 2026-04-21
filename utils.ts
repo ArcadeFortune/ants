@@ -3,14 +3,22 @@ import { Tile, TileType } from "./types/tile.ts";
 
 export function getDirectionDelta(direction: Direction): Position {
   switch (direction) {
-    case "n": return { x: 0, y: -1 };
-    case "ne": return { x: 1, y: -1 };
-    case "e": return { x: 1, y: 0 };
-    case "se": return { x: 1, y: 1 };
-    case "s": return { x: 0, y: 1 };
-    case "sw": return { x: -1, y: 1 };
-    case "w": return { x: -1, y: 0 };
-    case "nw": return { x: -1, y: -1 };
+    case "n":
+      return { x: 0, y: -1 };
+    case "ne":
+      return { x: 1, y: -1 };
+    case "e":
+      return { x: 1, y: 0 };
+    case "se":
+      return { x: 1, y: 1 };
+    case "s":
+      return { x: 0, y: 1 };
+    case "sw":
+      return { x: -1, y: 1 };
+    case "w":
+      return { x: -1, y: 0 };
+    case "nw":
+      return { x: -1, y: -1 };
   }
 }
 
@@ -22,8 +30,8 @@ export function isWithinDistance(a: Position, b: Position, dist: number): boolea
   return chebyshevDistance(a, b) <= dist;
 }
 
-export function getNearbyTiles(board: Tile[][], antX: number, antY: number, radius: number): { type: string; x: number; y: number; uuid?: string; }[] {
-  const tiles: { type: string; x: number; y: number; uuid?: string; }[] = [];
+export function getNearbyTiles(board: Tile[][], antX: number, antY: number, radius: number): { type: string; x: number; y: number; uuid?: string }[] {
+  const tiles: { type: string; x: number; y: number; uuid?: string }[] = [];
   const width = board[0].length;
   const height = board.length;
   for (let dy = -radius; dy <= radius; dy++) {

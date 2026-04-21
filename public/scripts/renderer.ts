@@ -50,7 +50,6 @@ export class Renderer {
 
   private loop(currentTime: number, lastTime: number = 0) {
     const deltaTime = (currentTime - lastTime) / 1000; //seconds
-    console.log("deltaTime --->", deltaTime);
     this.animationTime += deltaTime;
     this.updateCamera(deltaTime);
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -69,9 +68,6 @@ export class Renderer {
         this.drawTile(tile, canvasX, canvasY);
       }
     }
-
-    // console.log(this.animationTime % );
-    // console.log(this.cameraX && this.cameraY);
 
     lastTime = currentTime;
 

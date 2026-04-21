@@ -1,9 +1,8 @@
 import { generateUUID } from "../utils.ts";
 import { Ant } from "./ant.ts";
-import { Entity, EntityDTO } from "./entity.ts";
 import { TileType } from "./tile.ts";
 
-export class Hive implements Entity {
+export class Hive {
   readonly type = TileType.Hive;
   readonly id: string = generateUUID();
   antIds: Ant["id"][];
@@ -13,7 +12,7 @@ export class Hive implements Entity {
   }
 }
 
-export class HiveDTO implements EntityDTO {
+export class HiveDTO {
   readonly type = TileType.Hive;
   id: string;
   playerId: string;

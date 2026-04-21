@@ -11,6 +11,8 @@ export enum TileType {
   Unknown = "unknown",
 }
 
+// export type TileType = "hive" | "ant" | "food" | "wall" | "unknown";
+
 export type VisionTile = {
   type: TileType.Hive;
   hiveId: string;

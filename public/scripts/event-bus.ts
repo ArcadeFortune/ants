@@ -1,4 +1,4 @@
-import { EntityDTO } from "../../types/Entity.ts";
+import { EntityDTO } from "../../types/entity.ts";
 import { TileDTO } from "../../types/tile.ts";
 
 export interface AppEvent {
