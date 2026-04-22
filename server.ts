@@ -4,9 +4,10 @@ import { AntDTO } from "./types/ant.ts";
 import { ClientMessage, ServerEvent, serverEvent } from "./types/comms.ts";
 import { Loglevel } from "./types/general.ts";
 import { PlayerDTO } from "./types/player.ts";
-import { TileDTO } from "./types/tile.ts";
+import { TileDTO, TileType } from "./types/tile.ts";
 import { generateUUID } from "./utils.ts";
 import { debounce } from "@std/async";
+import { testServerEntitiesEvent, testServerPlayerInfoEvent, testServerTilesEvent } from "./tests/payloads.ts";
 
 const loglevel: Loglevel = (Number(Deno.env.get("LOGLEVEL")) ?? Loglevel.Warning) as Loglevel;
 const port = 8080;
@@ -54,43 +55,44 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
   const { socket, response } = Deno.upgradeWebSocket(req);
 
   socket.addEventListener("open", () => {
-    // Accept new connections
-    // assign new PlayerSession
-    // send InitState todo: one special server message response "ServerPlayerInitEvent"
     try {
-      const playerId = generateUUID();
-      const player = game.addPlayer(playerId);
-      const initialHive = player.hives[0];
-      if (!initialHive) return socket.send(serverEvent({ type: "error", body: { code: 500, message: "Something went wrong with the hive creation..." } }));
-      playerSockets.set(playerId, socket);
-      socketPlayers.set(socket, playerId);
-      console.log(`Player ${playerId} connected`);
+      socket.send(serverEvent(testServerTilesEvent));
+      socket.send(serverEvent(testServerEntitiesEvent));
+      socket.send(serverEvent(testServerPlayerInfoEvent));
+      return;
+      // const playerId = generateUUID();
+      // const player = game.addPlayer(playerId);
+      // const initialHive = player.hives[0];
+      // if (!initialHive) return socket.send(serverEvent({ type: "error", body: { code: 500, message: "Something went wrong with the hive creation..." } }));
+      // playerSockets.set(playerId, socket);
+      // socketPlayers.set(socket, playerId);
+      // console.log(`Player ${playerId} connected`);
 
-      clients.forEach((s) =>
-        s.send(serverEvent({
-          type: "join",
-          body: {
-            hiveId: initialHive.id,
-          },
-        }))
-      );
-      clients.add(socket);
+      // clients.forEach((s) =>
+      //   s.send(serverEvent({
+      //     type: "join",
+      //     body: {
+      //       hiveId: initialHive.id,
+      //     },
+      //   }))
+      // );
+      // clients.add(socket);
 
-      socket.send(serverEvent({
-        type: "multiple",
-        body: [
-          {
-            type: "playerInfo",
-            body: new PlayerDTO(player),
-          },
-          {
-            type: "tiles",
-            body: {
-              tiles: game.getVision(initialHive, 2).map((t) => new TileDTO(t)),
-            },
-          },
-        ],
-      }));
+      // socket.send(serverEvent({
+      //   type: "multiple",
+      //   body: [
+      //     {
+      //       type: "playerInfo",
+      //       body: new PlayerDTO(player),
+      //     },
+      //     {
+      //       type: "tiles",
+      //       body: {
+      //         tiles: game.getVision(initialHive, 2).map((t) => new TileDTO(t)),
+      //       },
+      //     },
+      //   ],
+      // }));
     } catch (e: unknown) {
       socket.send(serverEvent({
         type: "error",

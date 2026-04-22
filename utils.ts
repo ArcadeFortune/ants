@@ -58,7 +58,7 @@ export function findRandomEmptyPosition(board: Tile[][]): Position | null {
   const empties: Position[] = [];
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      if (board[y][x].type === TileType.Empty) {
+      if (board[y][x].type === TileType.Ground) {
         empties.push({ x, y });
       }
     }

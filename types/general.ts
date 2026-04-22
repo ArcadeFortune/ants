@@ -1,3 +1,4 @@
+import { Entity } from "./entity.ts";
 import { Player } from "./player.ts";
 import { Tile } from "./tile.ts";
 
@@ -20,6 +21,7 @@ export interface Board {
   width: number;
   height: number;
   tiles: Tile[][];
+  entities: Map<Player["id"], Entity>;
   // hives: Map<string, Hive>;
   players: Map<string, Player>;
 }

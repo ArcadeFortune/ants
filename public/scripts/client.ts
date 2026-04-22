@@ -14,6 +14,7 @@ export class Client {
     this.ws.onmessage = (payload) => {
       try {
         const message: ServerEvent = JSON.parse(payload.data);
+        console.debug("[Server Message]", message);
         this.handleMessage(message);
       } catch (e: unknown) {
         this.bus.emit("clientError", e instanceof Error ? e.message : String(e));
@@ -39,18 +40,23 @@ export class Client {
         this.bus.emit("gameStoreTiles", message.body.tiles);
         break;
       }
+      case "entities": {
+        this.bus.emit("gameStoreEntities", message.body.entities);
+        break;
+      }
       case "playerInfo": {
         const playerId = message.body.id;
-        const ants = message.body.ants;
-        const hives = message.body.hives;
-        this.bus.emit("gameStoreEntities", [...ants, ...hives]);
         this.bus.emit("gameStoreOwnPlayerId", playerId);
         break;
+      }
+      default: {
+        console.warn(`Unknown message "${message.type}": ${message.body}`);
       }
     }
   }
 
   send(message: ClientMessage) {
+    console.debug("[Client Message]", message);
     this.ensureWs();
     this.ws.send(JSON.stringify(message));
   }

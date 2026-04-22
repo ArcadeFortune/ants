@@ -2,6 +2,7 @@ import { TileDTO } from "./tile.ts";
 import { AntDTO } from "./ant.ts";
 import { PlayerDTO } from "./player.ts";
 import { Direction } from "./general.ts";
+import { EntityDTO } from "./entity.ts";
 
 interface ServerPlayerInfoEvent {
   type: "playerInfo";
@@ -24,8 +25,15 @@ interface ServerLeaveEvent {
 
 interface ServerTilesEvent {
   type: "tiles";
-  body: {
+  body: { //todo: flat this
     tiles: TileDTO[];
+  };
+}
+
+interface ServerEntitiesEvent {
+  type: "entities";
+  body: {
+    entities: EntityDTO[];
   };
 }
 
@@ -46,10 +54,12 @@ interface ServerErrorEvent {
 
 interface ServerMultipleEvents {
   type: "multiple";
-  body: Exclude<ServerEvent, ServerMultipleEvents>[];
+  body: BaseServerEvent[];
 }
 
-export type ServerEvent = ServerMultipleEvents | ServerPlayerInfoEvent | ServerJoinEvent | ServerLeaveEvent | ServerTilesEvent | ServerOwnAntMovedEvent | ServerErrorEvent;
+type BaseServerEvent = ServerPlayerInfoEvent | ServerJoinEvent | ServerLeaveEvent | ServerTilesEvent | ServerEntitiesEvent | ServerOwnAntMovedEvent | ServerErrorEvent;
+
+export type ServerEvent = BaseServerEvent | ServerMultipleEvents;
 
 export function serverEvent(e: ServerEvent): string {
   return JSON.stringify(e);

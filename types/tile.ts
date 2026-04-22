@@ -3,15 +3,13 @@ import { Entity } from "./entity.ts";
 import { Hive } from "./hive.ts";
 
 export enum TileType {
-  Empty = "empty",
-  Hive = "hive",
-  Ant = "ant",
-  Food = "food",
+  Ground = "ground",
+  Hive = "hive", //deprecated: moved to entitytype
+  Ant = "ant", //deprecated: moved to entitytype
+  Food = "food", //deprecated: moved to entitytype
   Wall = "wall",
   Unknown = "unknown",
 }
-
-// export type TileType = "hive" | "ant" | "food" | "wall" | "unknown";
 
 export type VisionTile = {
   type: TileType.Hive;
@@ -30,7 +28,7 @@ export class Tile {
   hive?: Hive;
   ant?: Ant;
   //todo: food
-  constructor(public type: TileType = TileType.Empty, public x: number, public y: number) {}
+  constructor(public type: TileType = TileType.Ground, public x: number, public y: number) {}
 
   setType(newType: TileType.Hive, hive: Hive): void;
   setType(newType: Exclude<TileType, TileType.Hive>, hive?: undefined): void;
@@ -77,7 +75,7 @@ export function generateTiles(width: number, height: number) {
   for (let y = 0; y < height; y++) {
     tiles.push([]);
     for (let x = 0; x < width; x++) {
-      tiles[y].push(new Tile(TileType.Empty, x, y));
+      tiles[y].push(new Tile(TileType.Ground, x, y));
     }
   }
   return tiles;

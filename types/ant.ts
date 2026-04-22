@@ -1,8 +1,8 @@
 import { generateUUID } from "../utils.ts";
-import { TileType } from "./tile.ts";
+import { BaseEntity, EntityType } from "./entity.ts";
 
-export class Ant {
-  readonly type = TileType.Ant;
+export class Ant implements BaseEntity {
+  readonly type: EntityType = "ant";
   readonly id = generateUUID();
   carrying = false;
   lastMove = 0;
@@ -15,8 +15,8 @@ export class Ant {
   ) {}
 }
 
-export class AntDTO {
-  readonly type = TileType.Ant;
+export class AntDTO implements BaseEntity {
+  readonly type: EntityType = "ant";
   readonly id: string;
   readonly playerId: string;
   x: number;

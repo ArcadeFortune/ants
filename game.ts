@@ -4,6 +4,7 @@ import { Board, Direction } from "./types/general.ts";
 import { Entity } from "./types/entity.ts";
 import { Player } from "./types/player.ts";
 import { Ant } from "./types/ant.ts";
+import { Hive } from "./types/hive.ts";
 
 export class Game {
   board: Board;
@@ -14,6 +15,7 @@ export class Game {
       height: 200,
       tiles: generateTiles(200, 200),
       players: new Map(),
+      entities: new Map(),
     };
     // Initialize some food and walls randomly
     for (let y = 0; y < 200; y++) {
@@ -32,10 +34,17 @@ export class Game {
   addPlayer(playerId: string) {
     const pos = findRandomEmptyPosition(this.board.tiles);
     if (!pos) throw new Error("No empty position for hive");
-    const player = new Player(playerId, pos.x, pos.y);
+    const player = new Player(playerId);
     this.board.players.set(player.id, player);
-    this.board.tiles[pos.y][pos.x].setType(TileType.Hive, player.hives[0]);
-    player.ants.forEach((a) => this.getVision(a));
+
+    const hive = new Hive(playerId, pos.x, pos.y);
+    const ants = [new Ant(playerId, pos.x, pos.y), new Ant(playerId, pos.x, pos.y)];
+    this.board.entities.set(hive.id, hive);
+    ants.forEach(a => this.board.entities.set(a.id, a));
+    
+    this.board.tiles[pos.y][pos.x].setType(TileType.Hive, hive);
+    // player.ants.forEach((a) => this.getVision(a));
+
     return player;
   }
 
@@ -47,9 +56,9 @@ export class Game {
     const player = this.board.players.get(playerId);
     if (!player) throw new Error("Player does not exist");
 
-    for (const hive of player.hives) {
-      this.board.tiles[hive.y][hive.x].setType(TileType.Empty);
-    }
+    // for (const hive of player.hives) {
+    //   this.board.tiles[hive.y][hive.x].setType(TileType.Empty);
+    // }
 
     // player.hives.length = 0;
     player.clear();

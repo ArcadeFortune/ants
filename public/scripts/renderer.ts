@@ -49,11 +49,35 @@ export class Renderer {
   }
 
   private loop(currentTime: number, lastTime: number = 0) {
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     const deltaTime = (currentTime - lastTime) / 1000; //seconds
     this.animationTime += deltaTime;
-    this.updateCamera(deltaTime);
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
+    this.updateCamera(deltaTime);
+    this.drawTiles();
+    this.drawEntities();
+
+    lastTime = currentTime;
+    requestAnimationFrame((c) => this.loop(c, lastTime));
+  }
+
+  drawEntities() {
+    this.gameStore
+    // if (tile.antIds && tile.antIds.length) {
+    //   this.drawSprite(this.antSprite, canvasX, canvasY, this.TILE_SIZE / 2);
+    // }
+  }
+
+  getSpriteIndex(frame: number) {
+    const col = frame % 2;
+    const row = Math.floor(frame / 2);
+    return { x: col, y: row };
+  }
+  drawSprite(img: HTMLImageElement, canvasX: number, canvasY: number, desiredSize: number, frame: number = Math.floor(this.animationTime % 6)) {
+    this.ctx.drawImage(img, this.getSpriteIndex(frame).x * this.spriteSize, this.getSpriteIndex(frame).y * this.spriteSize, this.spriteSize, this.spriteSize, canvasX, canvasY, desiredSize, desiredSize);
+  }
+
+  drawTiles() {
     const startTileX = Math.floor(this.cameraX) - this.HALF_VIEW_SIZE;
     const startTileY = Math.floor(this.cameraY) - this.HALF_VIEW_SIZE;
     const offsetX = (this.cameraX - Math.floor(this.cameraX)) * this.TILE_SIZE;
@@ -68,15 +92,10 @@ export class Renderer {
         this.drawTile(tile, canvasX, canvasY);
       }
     }
-
-    lastTime = currentTime;
-
-    requestAnimationFrame((c) => this.loop(c, lastTime));
   }
-
   drawTile(tile: TileDTO, canvasX: number, canvasY: number) {
     switch (tile?.type) {
-      case "empty":
+      case "ground":
         this.ctx.fillStyle = "#eee";
         break;
       case "wall":
@@ -98,19 +117,6 @@ export class Renderer {
     this.ctx.fillRect(canvasX, canvasY, this.TILE_SIZE, this.TILE_SIZE);
     this.ctx.strokeStyle = "#999"; //grid
     this.ctx.strokeRect(canvasX, canvasY, this.TILE_SIZE, this.TILE_SIZE);
-
-    if (tile.antIds && tile.antIds.length) {
-      this.drawSprite(this.antSprite, canvasX, canvasY, this.TILE_SIZE / 2);
-    }
-  }
-
-  getSpriteIndex(frame: number) {
-    const col = frame % 2;
-    const row = Math.floor(frame / 2);
-    return { x: col, y: row };
-  }
-  drawSprite(img: HTMLImageElement, canvasX: number, canvasY: number, desiredSize: number, frame: number = Math.floor(this.animationTime % 6)) {
-    this.ctx.drawImage(img, this.getSpriteIndex(frame).x * this.spriteSize, this.getSpriteIndex(frame).y * this.spriteSize, this.spriteSize, this.spriteSize, canvasX, canvasY, desiredSize, desiredSize);
   }
 
   setCamera(x: number, y: number) {

@@ -16,8 +16,13 @@ export class Controller {
   protected handleKeyPress(e: KeyboardEvent) {
     console.log("e.key --->", e.key);
     switch (e.key) {
+      case "d": {
+        debugger;
+        break;
+      }
       case "a": {
         console.log(this.gameStore.getEntitiesOfPlayer(this.gameStore.getPlayerId()));
+        // console.log(this.gameStore.getAntsOfPlayer(this.gameStore.getPlayerId()));
       }
     }
   }
