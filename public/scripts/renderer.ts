@@ -1,6 +1,8 @@
+import { EntityDTO } from "../../types/entity.ts";
 import { TileDTO, TileType } from "../../types/tile.ts";
 import { EventBus } from "./event-bus.ts";
 import { GameStore } from "./game-store.ts";
+import { Sprite } from "./sprite-manager.ts";
 
 export interface SnapshotTiles {
   type: TileType;
@@ -24,6 +26,7 @@ export class Renderer {
   private isMovingCamera = false;
 
   antSprite = new Image();
+  hiveSprite = new Sprite();
   spriteSize = 32;
   animationTime = 0;
 
@@ -38,6 +41,7 @@ export class Renderer {
     this.ctx = ctx;
 
     this.antSprite.src = "ant.png";
+    this.hiveSprite.load("sprites/hive/hive.png");
 
     bus.on("rendererMoveCamera", (pos) => {
       this.moveCamera(pos.x, pos.y);
@@ -69,17 +73,28 @@ export class Renderer {
     for (const entity of this.gameStore.getEntities()) {
       const canvasX = (entity.x - cameraTopLeftX) * this.TILE_SIZE - offsetX;
       const canvasY = (entity.y - cameraTopLeftY) * this.TILE_SIZE - offsetY;
-      this.drawSprite(this.antSprite, canvasX, canvasY, this.TILE_SIZE / 2);
+      this.drawEntity(entity, canvasX, canvasY);
     }
   }
 
-  getSpriteIndex(frame: number) {
-    const col = frame % 2;
-    const row = Math.floor(frame / 2);
-    return { x: col, y: row };
-  }
-  drawSprite(img: HTMLImageElement, canvasX: number, canvasY: number, desiredSize: number, frame: number = Math.floor(this.animationTime % 6)) {
-    this.ctx.drawImage(img, this.getSpriteIndex(frame).x * this.spriteSize, this.getSpriteIndex(frame).y * this.spriteSize, this.spriteSize, this.spriteSize, canvasX, canvasY, desiredSize, desiredSize);
+  drawEntity(entity: EntityDTO, canvasX: number, canvasY: number) {
+    const desiredSize = this.TILE_SIZE;
+    switch (entity.type) {
+      case "ant": {
+        break;
+      }
+      case "hive": {
+        const frameCount = this.hiveSprite.frames.length;
+        const animationFps = 1; // animation frames per second
+        const frameIndex = Math.floor(this.animationTime * animationFps) % frameCount;
+
+        const hiveFrame = this.hiveSprite.getFrame(frameIndex);
+        if (!hiveFrame) break;
+
+        this.ctx.drawImage(hiveFrame.image, hiveFrame.x, hiveFrame.y, this.spriteSize, this.spriteSize, canvasX, canvasY, desiredSize, desiredSize);
+        break;
+      }
+    }
   }
 
   drawTiles() {

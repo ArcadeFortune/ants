@@ -15,6 +15,8 @@ function main() {
   client.connect();
   renderer.render();
   controller.mount();
+
+  window["ants"] = { client, game, renderer, controller, eventBus };
 }
 
 document.addEventListener("DOMContentLoaded", main);
