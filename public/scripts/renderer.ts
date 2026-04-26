@@ -62,10 +62,15 @@ export class Renderer {
   }
 
   drawEntities() {
-    this.gameStore
-    // if (tile.antIds && tile.antIds.length) {
-    //   this.drawSprite(this.antSprite, canvasX, canvasY, this.TILE_SIZE / 2);
-    // }
+    const offsetX = (this.cameraX - Math.floor(this.cameraX)) * this.TILE_SIZE;
+    const offsetY = (this.cameraY - Math.floor(this.cameraY)) * this.TILE_SIZE;
+    const cameraTopLeftX = Math.floor(this.cameraX) - this.HALF_VIEW_SIZE;
+    const cameraTopLeftY = Math.floor(this.cameraY) - this.HALF_VIEW_SIZE;
+    for (const entity of this.gameStore.getEntities()) {
+      const canvasX = (entity.x - cameraTopLeftX) * this.TILE_SIZE - offsetX;
+      const canvasY = (entity.y - cameraTopLeftY) * this.TILE_SIZE - offsetY;
+      this.drawSprite(this.antSprite, canvasX, canvasY, this.TILE_SIZE / 2);
+    }
   }
 
   getSpriteIndex(frame: number) {

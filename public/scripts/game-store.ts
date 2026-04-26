@@ -55,7 +55,7 @@ export class GameStore {
   }
 
   getEntities() {
-    return new Array(this.entities);
+    return this.entities.values();
   }
 
   // protected indexAnt(e: EntityDTO) {
