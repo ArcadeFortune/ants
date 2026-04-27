@@ -1,8 +1,8 @@
 import { generateUUID } from "../utils.ts";
-import { BaseEntity, EntityType } from "./entity.ts";
+import { BaseEntity } from "./entity.ts";
 
 export class Ant implements BaseEntity {
-  readonly type: EntityType = "ant";
+  readonly type = "ant";
   readonly id = generateUUID();
   carrying = false;
   lastMove = 0;
@@ -16,7 +16,7 @@ export class Ant implements BaseEntity {
 }
 
 export class AntDTO implements BaseEntity {
-  readonly type: EntityType = "ant";
+  readonly type = "ant";
   readonly id: string;
   readonly playerId: string;
   x: number;

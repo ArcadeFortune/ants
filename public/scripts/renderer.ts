@@ -84,8 +84,16 @@ export class Renderer {
         const antFrame = this.antSprite.getFrame(this.animationTime);
         if (!antFrame) break;
 
-        this.ctx.drawImage(antFrame.image, antFrame.x, antFrame.y, this.spriteSize, this.spriteSize, canvasX, canvasY, desiredSize, desiredSize);
+        const hive = this.gameStore.getHiveOnCoordinates(entity.x, entity.y);
 
+        if (!hive) {
+          this.ctx.drawImage(antFrame.image, antFrame.x, antFrame.y, this.spriteSize, this.spriteSize, canvasX, canvasY, desiredSize, desiredSize);
+        } else {
+          const smallerSize = this.TILE_SIZE / 4;
+          const bottomRightX = canvasX + this.TILE_SIZE / 4 * 3;
+          const bottomRightY = canvasY + this.TILE_SIZE / 4 * 3;
+          this.ctx.drawImage(antFrame.image, antFrame.x, antFrame.y, this.spriteSize, this.spriteSize, bottomRightX, bottomRightY, smallerSize, smallerSize);
+        }
         break;
       }
       case "hive": {

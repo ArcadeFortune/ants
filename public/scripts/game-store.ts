@@ -1,14 +1,20 @@
 import { AntDTO } from "../../types/ant.ts";
 import { EntityDTO } from "../../types/entity.ts";
+import { HiveDTO } from "../../types/hive.ts";
 import { PlayerDTO } from "../../types/player.ts";
 import { TileDTO, TileType } from "../../types/tile.ts";
 import { EventBus } from "./event-bus.ts";
 
+interface TileEntitiesIndex {
+  hive?: HiveDTO;
+  ants?: AntDTO[];
+}
 export class GameStore {
   protected tiles = new Map<string, TileDTO>();
   protected entities = new Map<EntityDTO["id"], EntityDTO>();
   protected playerId: string = "";
 
+  protected hiveByTileIndex = new Map<string, HiveDTO>();
   // protected playerToAntIds = new Map<PlayerDTO["id"], Set<AntDTO["id"]>>();
 
   constructor(protected bus: EventBus) {
@@ -21,16 +27,12 @@ export class GameStore {
     return `${x},${y}`;
   }
 
-  tileToId(tile: TileDTO) {
-    return this.coordsToId(tile.x, tile.y);
-  }
-
   protected saveTiles(tiles: TileDTO[]) {
     if (this.tiles.size === 0) {
       this.bus.emit("rendererMoveCamera", this.calculateCenter(tiles));
     }
     for (const tile of tiles) {
-      const id = this.tileToId(tile);
+      const id = this.coordsToId(tile.x, tile.y);
       this.tiles.set(id, tile);
     }
   }
@@ -43,10 +45,16 @@ export class GameStore {
     this.playerId = playerId;
   }
 
+  protected indexEntity(e: EntityDTO) {
+    if (e.type === "hive") {
+      return this.hiveByTileIndex.set(this.coordsToId(e.x, e.y), e);
+    }
+  }
+
   protected setEntities(entities: EntityDTO[]) {
     entities.forEach((e) => {
       this.entities.set(e.id, e);
-      // this.indexAnt(e);
+      this.indexEntity(e);
     });
   }
 
@@ -56,6 +64,10 @@ export class GameStore {
 
   getEntities() {
     return this.entities.values();
+  }
+
+  getHiveOnCoordinates(x: number, y: number) {
+    return this.hiveByTileIndex.get(this.coordsToId(x, y));
   }
 
   // protected indexAnt(e: EntityDTO) {
