@@ -26,7 +26,7 @@ export class Renderer {
   private isMovingCamera = false;
 
   antSprite = new Image();
-  hiveSprite = new Sprite();
+  hiveSprite = new Sprite(1);
   spriteSize = 32;
   animationTime = 0;
 
@@ -84,11 +84,7 @@ export class Renderer {
         break;
       }
       case "hive": {
-        const frameCount = this.hiveSprite.frames.length;
-        const animationFps = 1; // animation frames per second
-        const frameIndex = Math.floor(this.animationTime * animationFps) % frameCount;
-
-        const hiveFrame = this.hiveSprite.getFrame(frameIndex);
+        const hiveFrame = this.hiveSprite.getFrame(this.animationTime);
         if (!hiveFrame) break;
 
         this.ctx.drawImage(hiveFrame.image, hiveFrame.x, hiveFrame.y, this.spriteSize, this.spriteSize, canvasX, canvasY, desiredSize, desiredSize);

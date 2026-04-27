@@ -37,7 +37,7 @@ export class Sprite {
   frames: Rect[] = [];
   private loaded = false;
 
-  constructor() {
+  constructor(public framesPerSecond: number = 1) {
     this.image = new Image();
   }
 
@@ -72,7 +72,10 @@ export class Sprite {
     return this.loaded;
   }
 
-  getFrame(frameIndex: number) {
+  getFrame(animationTime: number) {
+    const frameCount = this.frames.length;
+    const frameIndex = Math.floor(animationTime * this.framesPerSecond) % frameCount;
+
     const frame = this.frames[frameIndex];
     if (!frame || !this.isLoaded()) return null;
     return {
