@@ -25,7 +25,7 @@ export class Renderer {
   private movingCameraDuration = 0.4;
   private isMovingCamera = false;
 
-  antSprite = new Image();
+  antSprite = new Sprite(2);
   hiveSprite = new Sprite(1);
   spriteSize = 32;
   animationTime = 0;
@@ -40,7 +40,7 @@ export class Renderer {
     ctx.imageSmoothingEnabled = false;
     this.ctx = ctx;
 
-    this.antSprite.src = "ant.png";
+    this.antSprite.load("/sprites/ant/ant.png");
     this.hiveSprite.load("sprites/hive/hive.png");
 
     bus.on("rendererMoveCamera", (pos) => {
@@ -81,6 +81,11 @@ export class Renderer {
     const desiredSize = this.TILE_SIZE;
     switch (entity.type) {
       case "ant": {
+        const antFrame = this.antSprite.getFrame(this.animationTime);
+        if (!antFrame) break;
+
+        this.ctx.drawImage(antFrame.image, antFrame.x, antFrame.y, this.spriteSize, this.spriteSize, canvasX, canvasY, desiredSize, desiredSize);
+
         break;
       }
       case "hive": {

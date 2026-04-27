@@ -79,7 +79,7 @@ export const testServerEntitiesEvent: ServerEvent = {
       {
         id: generateUUID(),
         type: "ant",
-        x: 11,
+        x: 12,
         y: 11,
         playerId: testPlayerId,
       },
@@ -87,7 +87,7 @@ export const testServerEntitiesEvent: ServerEvent = {
         id: generateUUID(),
         type: "ant",
         x: 11,
-        y: 11,
+        y: 12,
         playerId: testOtherPlayerId,
       },
     ],
