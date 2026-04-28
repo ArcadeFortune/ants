@@ -2,7 +2,7 @@ import { AntDTO } from "../../types/ant.ts";
 import { EntityDTO } from "../../types/entity.ts";
 import { HiveDTO } from "../../types/hive.ts";
 import { PlayerDTO } from "../../types/player.ts";
-import { TileDTO, TileType } from "../../types/tile.ts";
+import { Coordinate, TileDTO, TileType } from "../../types/tile.ts";
 import { EventBus } from "./event-bus.ts";
 
 interface TileEntitiesIndex {
@@ -10,10 +10,11 @@ interface TileEntitiesIndex {
   ants?: AntDTO[];
 }
 export class GameStore {
-  protected tiles = new Map<string, TileDTO>();
+  protected tiles = new Map<Coordinate, TileDTO>();
   protected entities = new Map<EntityDTO["id"], EntityDTO>();
   protected playerId: string = "";
 
+  protected entitiesByTileIndex = new Map<Coordinate, EntityDTO[]>();
   protected hiveByTileIndex = new Map<string, HiveDTO>();
   // protected playerToAntIds = new Map<PlayerDTO["id"], Set<AntDTO["id"]>>();
 
@@ -23,7 +24,7 @@ export class GameStore {
     bus.on("gameStoreOwnPlayerId", (playerId) => this.setPlayerId(playerId));
   }
 
-  coordsToId(x: number, y: number) {
+  coordsToId(x: number, y: number): Coordinate {
     return `${x},${y}`;
   }
 
@@ -45,29 +46,27 @@ export class GameStore {
     this.playerId = playerId;
   }
 
-  protected indexEntity(e: EntityDTO) {
-    if (e.type === "hive") {
-      return this.hiveByTileIndex.set(this.coordsToId(e.x, e.y), e);
-    }
-  }
-
   protected setEntities(entities: EntityDTO[]) {
     entities.forEach((e) => {
       this.entities.set(e.id, e);
-      this.indexEntity(e);
+
+      const coordinate = this.coordsToId(e.x, e.y);
+      const entities = this.entitiesByTileIndex.get(coordinate) ?? [];
+      entities.push(e);
+      this.entitiesByTileIndex.set(coordinate, entities);
     });
   }
 
-  getEntity(id: EntityDTO["id"]) {
+  getEntityById(id: EntityDTO["id"]) {
     return this.entities.get(id);
+  }
+
+  getEntitiesByCoordinate(coordinate: Coordinate) {
+    return this.entitiesByTileIndex.get(coordinate);
   }
 
   getEntities() {
     return this.entities.values();
-  }
-
-  getHiveOnCoordinates(x: number, y: number) {
-    return this.hiveByTileIndex.get(this.coordsToId(x, y));
   }
 
   // protected indexAnt(e: EntityDTO) {
@@ -84,10 +83,6 @@ export class GameStore {
   //     this.playerToAntIds.set(ownerId, ids);
   //   }
   // }
-
-  getEntityById(id: string) {
-    this.entities.get(id);
-  }
 
   protected setEntityById(id: string, entity: EntityDTO) {
     this.entities.set(id, entity);

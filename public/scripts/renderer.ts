@@ -79,20 +79,21 @@ export class Renderer {
 
   drawEntity(entity: EntityDTO, canvasX: number, canvasY: number) {
     const desiredSize = this.TILE_SIZE;
+    const entities = this.gameStore.getEntitiesByCoordinate(this.gameStore.coordsToId(entity.x, entity.y));
+    if (!entities) return console.warn("entity to draw is not registered on any tile.");
     switch (entity.type) {
       case "ant": {
         const antFrame = this.antSprite.getFrame(this.animationTime);
         if (!antFrame) break;
 
-        const hive = this.gameStore.getHiveOnCoordinates(entity.x, entity.y);
-
-        if (!hive) {
-          this.ctx.drawImage(antFrame.image, antFrame.x, antFrame.y, this.spriteSize, this.spriteSize, canvasX, canvasY, desiredSize, desiredSize);
-        } else {
+        const hasHive = entities.find((e) => e.type === "hive");
+        if (hasHive) {
           const smallerSize = this.TILE_SIZE / 4;
           const bottomRightX = canvasX + this.TILE_SIZE / 4 * 3;
           const bottomRightY = canvasY + this.TILE_SIZE / 4 * 3;
           this.ctx.drawImage(antFrame.image, antFrame.x, antFrame.y, this.spriteSize, this.spriteSize, bottomRightX, bottomRightY, smallerSize, smallerSize);
+        } else {
+          this.ctx.drawImage(antFrame.image, antFrame.x, antFrame.y, this.spriteSize, this.spriteSize, canvasX, canvasY, desiredSize, desiredSize);
         }
         break;
       }

@@ -10,7 +10,7 @@ import { debounce } from "@std/async";
 import { testServerEntitiesEvent, testServerPlayerInfoEvent, testServerTilesEvent } from "./tests/payloads.ts";
 
 const loglevel: Loglevel = (Number(Deno.env.get("LOGLEVEL")) ?? Loglevel.Warning) as Loglevel;
-const port = 8080;
+const port = 6969;
 const game = new Game();
 const playerSockets = new Map<string, WebSocket>();
 const socketPlayers = new Map<WebSocket, string>();

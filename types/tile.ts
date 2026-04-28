@@ -2,6 +2,8 @@ import { Ant } from "./ant.ts";
 import { Entity } from "./entity.ts";
 import { Hive } from "./hive.ts";
 
+export type Coordinate = `${number},${number}`;
+
 export enum TileType {
   Ground = "ground",
   Hive = "hive", //deprecated: moved to entitytype
@@ -64,7 +66,6 @@ export class TileDTO {
     this.x = tile.x;
     this.y = tile.y;
     this.hiveId = tile.hive?.id;
-    this.antIds = tile.hive?.antIds;
     this.antId = tile.ant?.id;
     this.playerId = tile.hive?.playerId || tile.ant?.playerId;
   }
