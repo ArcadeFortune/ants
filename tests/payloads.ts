@@ -90,6 +90,13 @@ export const testServerEntitiesEvent: ServerEvent = {
         y: 11,
         playerId: testOtherPlayerId,
       },
+      {
+        id: generateUUID(),
+        type: "ant",
+        x: 11,
+        y: 11,
+        playerId: testOtherPlayerId,
+      },
     ],
   },
 };

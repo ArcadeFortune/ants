@@ -6,7 +6,7 @@ export class Client {
 
   constructor(protected bus: EventBus) {}
 
-  connect(url: string = "ws://localhost:6969") {
+  init(url: string = "ws://localhost:6969") {
     this.ws = new WebSocket(url);
     this.ws.onopen = () => {
       this.bus.emit("clientConnected", undefined);

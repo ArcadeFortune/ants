@@ -38,6 +38,7 @@ export class Renderer {
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Unable to get 2d render engine");
     ctx.imageSmoothingEnabled = false;
+    ctx.font = "25px Arial";
     this.ctx = ctx;
 
     this.antSprite.load("/sprites/ant/ant.png");
@@ -48,7 +49,7 @@ export class Renderer {
     });
   }
 
-  render() {
+  init() {
     requestAnimationFrame((t) => this.loop(t));
   }
 
@@ -59,7 +60,6 @@ export class Renderer {
 
     this.updateCamera(deltaTime);
     this.drawTiles();
-    this.drawEntities();
 
     lastTime = currentTime;
     requestAnimationFrame((c) => this.loop(c, lastTime));
@@ -70,40 +70,11 @@ export class Renderer {
     const offsetY = (this.cameraY - Math.floor(this.cameraY)) * this.TILE_SIZE;
     const cameraTopLeftX = Math.floor(this.cameraX) - this.HALF_VIEW_SIZE;
     const cameraTopLeftY = Math.floor(this.cameraY) - this.HALF_VIEW_SIZE;
+
     for (const entity of this.gameStore.getEntities()) {
       const canvasX = (entity.x - cameraTopLeftX) * this.TILE_SIZE - offsetX;
       const canvasY = (entity.y - cameraTopLeftY) * this.TILE_SIZE - offsetY;
       this.drawEntity(entity, canvasX, canvasY);
-    }
-  }
-
-  drawEntity(entity: EntityDTO, canvasX: number, canvasY: number) {
-    const desiredSize = this.TILE_SIZE;
-    const entities = this.gameStore.getEntitiesByCoordinate(this.gameStore.coordsToId(entity.x, entity.y));
-    if (!entities) return console.warn("entity to draw is not registered on any tile.");
-    switch (entity.type) {
-      case "ant": {
-        const antFrame = this.antSprite.getFrame(this.animationTime);
-        if (!antFrame) break;
-
-        const hasHive = entities.find((e) => e.type === "hive");
-        if (hasHive) {
-          const smallerSize = this.TILE_SIZE / 4;
-          const bottomRightX = canvasX + this.TILE_SIZE / 4 * 3;
-          const bottomRightY = canvasY + this.TILE_SIZE / 4 * 3;
-          this.ctx.drawImage(antFrame.image, antFrame.x, antFrame.y, this.spriteSize, this.spriteSize, bottomRightX, bottomRightY, smallerSize, smallerSize);
-        } else {
-          this.ctx.drawImage(antFrame.image, antFrame.x, antFrame.y, this.spriteSize, this.spriteSize, canvasX, canvasY, desiredSize, desiredSize);
-        }
-        break;
-      }
-      case "hive": {
-        const hiveFrame = this.hiveSprite.getFrame(this.animationTime);
-        if (!hiveFrame) break;
-
-        this.ctx.drawImage(hiveFrame.image, hiveFrame.x, hiveFrame.y, this.spriteSize, this.spriteSize, canvasX, canvasY, desiredSize, desiredSize);
-        break;
-      }
     }
   }
 
@@ -120,9 +91,79 @@ export class Renderer {
         const canvasX = x * this.TILE_SIZE - offsetX;
         const canvasY = y * this.TILE_SIZE - offsetY;
         this.drawTile(tile, canvasX, canvasY);
+
+        const entities = this.gameStore.getEntitiesByCoordinate(tile);
+        if (!entities || !entities.length) continue;
+
+        const hive = entities.find((e) => e.type === "hive"); // assume max
+        const ants = entities.filter((e) => e.type === "ant");
+
+        if (hive) {
+          this.drawEntity(hive, canvasX, canvasY);
+          if (ants.length > 0) {
+            //draw smaller ants with counter next to hive
+            const smallerSize = this.TILE_SIZE / 2;
+
+            const antFrame = this.antSprite.getFrame(this.animationTime);
+            if (antFrame) {
+              this.ctx.drawImage(
+                antFrame.image,
+                antFrame.x,
+                antFrame.y,
+                this.spriteSize,
+                this.spriteSize,
+                canvasX,
+                canvasY + this.TILE_SIZE - smallerSize,
+                smallerSize,
+                smallerSize,
+              );
+            }
+
+            const prevFillStyle = this.ctx.fillStyle;
+            this.ctx.fillStyle = "black";
+            this.ctx.fillText(
+              ants.length.toString(),
+              canvasX + smallerSize,
+              canvasY + this.TILE_SIZE - 4,
+            );
+            this.ctx.fillStyle = prevFillStyle;
+          }
+        } else if (!hive && ants.length === 1) {
+          this.drawEntity(ants[0], canvasX, canvasY);
+        } else if (!hive && ants.length > 1) {
+          this.drawEntity(ants[0], canvasX, canvasY);
+
+          const prevFillStyle = this.ctx.fillStyle;
+          this.ctx.fillStyle = "black";
+          this.ctx.fillText(
+            ants.length.toString(),
+            canvasX + this.TILE_SIZE / 2,
+            canvasY + this.TILE_SIZE - 4,
+          );
+          this.ctx.fillStyle = prevFillStyle;
+        }
       }
     }
   }
+
+  drawEntity(entity: EntityDTO, canvasX: number, canvasY: number) {
+    const desiredSize = this.TILE_SIZE;
+    switch (entity.type) {
+      case "ant": {
+        const antFrame = this.antSprite.getFrame(this.animationTime);
+        if (!antFrame) break;
+        this.ctx.drawImage(antFrame.image, antFrame.x, antFrame.y, this.spriteSize, this.spriteSize, canvasX, canvasY, desiredSize, desiredSize);
+        break;
+      }
+      case "hive": {
+        const hiveFrame = this.hiveSprite.getFrame(this.animationTime);
+        if (!hiveFrame) break;
+        this.ctx.drawImage(hiveFrame.image, hiveFrame.x, hiveFrame.y, this.spriteSize, this.spriteSize, canvasX, canvasY, desiredSize, desiredSize);
+        break;
+      }
+    }
+  }
+
   drawTile(tile: TileDTO, canvasX: number, canvasY: number) {
     switch (tile?.type) {
       case "ground":
@@ -164,6 +205,7 @@ export class Renderer {
   private lerp(a: number, b: number, t: number) {
     return a + (b - a) * t;
   }
+
   private updateCamera(deltaTime: number) {
     if (!this.isMovingCamera) return;
 

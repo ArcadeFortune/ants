@@ -6,7 +6,7 @@ export class Controller {
   constructor(protected bus: EventBus, protected gameStore: GameStore) {
   }
 
-  mount() {
+  init() {
     document.addEventListener("keydown", (e) => this.handleKeyPress(e));
   }
 
