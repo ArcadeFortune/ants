@@ -18,5 +18,4 @@ function main() {
 
   window["ants"] = { client, gameStore, renderer, controller, eventBus };
 }
-
 document.addEventListener("DOMContentLoaded", main);
