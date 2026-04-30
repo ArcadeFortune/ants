@@ -19,7 +19,7 @@ const clients = new Set<WebSocket>();
 
 let files: Deno.bundle.Result | undefined;
 const buildFrontend = debounce(async (event?: Deno.FsEvent) => {
-  if (!Deno.bundle) return;
+  if (!Deno.bundle && typeof Deno.bundle !== "function") return;
   if (event) console.log("[%s] %s", event.kind, event.paths[0] + ": Building Frontend...");
   try {
     files = await Deno.bundle({
