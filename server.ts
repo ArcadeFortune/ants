@@ -19,6 +19,7 @@ const clients = new Set<WebSocket>();
 
 let files: Deno.bundle.Result | undefined;
 const buildFrontend = debounce(async (event?: Deno.FsEvent) => {
+  if (!Deno.bundle) return;
   if (event) console.log("[%s] %s", event.kind, event.paths[0] + ": Building Frontend...");
   try {
     files = await Deno.bundle({
@@ -39,16 +40,21 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
       const url = new URL(req.url);
       let filepath = decodeURIComponent(url.pathname);
       if (filepath === "/" || filepath === "") filepath = "index.html";
-      filepath = path.join(Deno.cwd(), "public", filepath);
-
+      console.log("[Request] %s %s", req.method, filepath);
       //serve from memory
-      const memoryFile = files?.outputFiles?.find((f) => f.path === filepath);
+      const memoryFile = files?.outputFiles?.find((f) => f.path === path.join(Deno.cwd(), "public", filepath));
       if (memoryFile && memoryFile.contents) return new Response(memoryFile.contents);
-      //else serve from ./public
-      const file = await Deno.open(filepath, { read: true });
-      return new Response(file.readable);
+      try {
+        //else serve from ./build
+        const file = await Deno.open(path.join(Deno.cwd(), "build", filepath), { read: true });
+        return new Response(file.readable);
+      } catch (_e: unknown) {
+        //else serve from ./public
+        const file = await Deno.open(path.join(Deno.cwd(), "public", filepath), { read: true });
+        return new Response(file.readable);
+      }
     } catch (e) {
-      console.error("Error finding file: ", e instanceof Error ? e.message : String(e));
+      console.warn("[Warning] 404 File not found, %s", e instanceof Error ? e.message : String(e));
       return new Response("Not found", { status: 404 });
     }
   }

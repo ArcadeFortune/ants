@@ -16,7 +16,7 @@ export class Client {
     });
   }
 
-  init(url: string = "ws://localhost:6969") {
+  init(url: string = `${location.protocol === "https:" ? "wss" : "ws"}://${location.hostname}:6969`) {
     this.ws = new WebSocket(url);
     this.bus.emit("clientConnecting", undefined);
     this.ws.onopen = () => {
