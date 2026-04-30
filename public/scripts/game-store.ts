@@ -65,11 +65,26 @@ export class GameStore {
     this.entities.set(id, entity);
   }
 
-  getEntitiesOfPlayer(playerId: string) {
+  getEntitiesOfPlayer(playerId: string = this.getPlayerId()) {
     const result: EntityDTO[] = [];
 
     for (const e of this.entities.values()) {
       if (e.playerId === playerId) {
+        result.push(e);
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * loops over all entities to find the ones belonging to the player & are ants
+   */
+  getAntsOfPlayer(playerId: string = this.getPlayerId()) {
+    const result: EntityDTO[] = [];
+
+    for (const e of this.entities.values()) {
+      if (e.type === "ant" && e.playerId === playerId) {
         result.push(e);
       }
     }

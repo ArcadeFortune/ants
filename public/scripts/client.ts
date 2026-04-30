@@ -1,4 +1,4 @@
-import { ClientMessage, ServerEvent } from "../../types/comms.ts";
+import { ClientMessage, clientMessage, ServerEvent } from "../../types/comms.ts";
 import { EventBus } from "./event-bus.ts";
 
 export class Client {
@@ -8,13 +8,15 @@ export class Client {
 
   init(url: string = "ws://localhost:6969") {
     this.ws = new WebSocket(url);
+    this.bus.emit("clientConnecting", undefined);
     this.ws.onopen = () => {
       this.bus.emit("clientConnected", undefined);
+      this.initListeners();
     };
     this.ws.onmessage = (payload) => {
       try {
         const message: ServerEvent = JSON.parse(payload.data);
-        console.debug("[Server Message]", message);
+        console.debug("[Server Message] %s %o", message.type, message.body);
         this.handleMessage(message);
       } catch (e: unknown) {
         this.bus.emit("clientError", e instanceof Error ? e.message : String(e));
@@ -22,6 +24,19 @@ export class Client {
     };
     this.ws.onerror = () => {};
     this.ws.onclose = () => {};
+  }
+
+  protected initListeners() {
+    this.bus.on("gameMoveAnt", (payload) => {
+      this.ensureWs();
+      this.ws.send(clientMessage({
+        type: "move",
+        body: {
+          antId: payload.id,
+          direction: payload.direction,
+        },
+      }));
+    });
   }
 
   protected ensureWs(): asserts this is { ws: WebSocket } {

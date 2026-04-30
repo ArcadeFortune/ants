@@ -9,69 +9,13 @@
       canvas {
         image-rendering: pixelated;
       }
-
-      pre {
-        margin: 0;
-      }
-
-      .history {
-        height: 80vh;
-        width: 100%;
-        overflow: auto;
-        display: flex;
-        flex-direction: column-reverse;
-
-        fieldset {
-          animation: newMessage 2s ease-out forwards;
-          mix-blend-mode: normal;
-
-          &.error {
-            animation: newError 2s ease-out forwards;
-          }
-
-          legend {
-            animation: inherit;
-            mix-blend-mode: normal;
-          }
-        }
-      }
-
-      @keyframes newMessage {
-        from {
-          background-color: #00ff7b64;
-        }
-
-        to {
-          background-color: rgba(255, 255, 255, 0);
-        }
-      }
-
-      @keyframes newError {
-        from {
-          background-color: #ff00004a;
-        }
-
-        to {
-          background-color: rgba(255, 255, 255, 0);
-        }
-      }
     </style>
   </head>
 
   <body>
     <button type="button" onclick="debugger">pause</button>
-    <h2>Status</h2>
-    <div class="status"></div>
-
     <h2>map</h2>
     <canvas id="map" width="350" height="350"></canvas>
-
-    <h2>buttons</h2>
-    <div class="buttons"></div>
-
-    <h2>history</h2>
-    <div class="history"></div>
-
     <script src="./scripts/main.ts"></script>
   </body>
 

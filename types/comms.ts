@@ -25,7 +25,7 @@ interface ServerLeaveEvent {
 
 interface ServerTilesEvent {
   type: "tiles";
-  body: { //todo: flat this
+  body: {
     tiles: TileDTO[];
   };
 }
@@ -67,19 +67,28 @@ export function serverEvent(e: ServerEvent): string {
 
 interface ClientPingMessage {
   type: "ping";
+  body: void;
 }
 
 interface ClientWhoAmIMessage {
   type: "whoami";
+  body: void;
 }
 
 interface ClientMoveMessage {
   type: "move";
-  antId: string;
-  direction: Direction;
+  body: {
+    antId: string;
+    direction: Direction;
+  };
 }
 
 export type ClientMessage = ClientPingMessage | ClientWhoAmIMessage | ClientMoveMessage;
+
+export function clientMessage(e: ClientMessage): string {
+  console.debug("[Client Message] %s %o", e.type, e);
+  return JSON.stringify(e);
+}
 // export interface ServerMessage {
 //   type: "update";
 //   ants: {
