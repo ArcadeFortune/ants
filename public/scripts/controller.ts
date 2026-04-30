@@ -17,7 +17,8 @@ export class Controller {
     const isValid = ants.find((a) => a.id === newAnt.id);
     //todo: what if there is an ant with an id of null?
     if (isValid) this._selectedAnt = newAnt;
-    else this._selectedAnt = ants[0];
+    else if (ants.length) this._selectedAnt = ants[0];
+    else return;
     this.bus.emit("rendererSelectAnt", this._selectedAnt);
   }
 

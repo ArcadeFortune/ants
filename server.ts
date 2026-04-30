@@ -58,6 +58,7 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
       return new Response("Not found", { status: 404 });
     }
   }
+  console.log("[Request] WS %s", req.url);
   const { socket, response } = Deno.upgradeWebSocket(req);
 
   socket.addEventListener("open", () => {
@@ -195,6 +196,7 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
   });
 
   socket.addEventListener("error", (_event) => {
+    console.error("[Error] 500 Socket had an error.");
     // Handle disconnects (mark player as offline; possibly reassign hive ownership or keep until timeout)
     const playerId = socketPlayers.get(socket);
     if (!playerId) return;
