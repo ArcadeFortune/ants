@@ -31,8 +31,12 @@ export class Client {
         this.bus.emit("clientError", e instanceof Error ? e.message : String(e));
       }
     };
-    this.ws.onerror = () => {};
-    this.ws.onclose = () => {};
+    this.ws.onerror = (e) => {
+      console.error(e);
+    };
+    this.ws.onclose = (e) => {
+      console.debug("closing websocket, %o", e);
+    };
   }
 
   protected ensureWs(): asserts this is { ws: WebSocket } {
