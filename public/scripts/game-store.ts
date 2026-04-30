@@ -1,3 +1,4 @@
+import { AntDTO } from "../../types/ant.ts";
 import { EntityDTO } from "../../types/entity.ts";
 import { Coordinate, TileDTO, TileType } from "../../types/tile.ts";
 import { EventBus } from "./event-bus.ts";
@@ -81,7 +82,7 @@ export class GameStore {
    * loops over all entities to find the ones belonging to the player & are ants
    */
   getAntsOfPlayer(playerId: string = this.getPlayerId()) {
-    const result: EntityDTO[] = [];
+    const result: AntDTO[] = [];
 
     for (const e of this.entities.values()) {
       if (e.type === "ant" && e.playerId === playerId) {

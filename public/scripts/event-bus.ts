@@ -1,3 +1,4 @@
+import { AntDTO } from "../../types/ant.ts";
 import { EntityDTO } from "../../types/entity.ts";
 import { Direction } from "../../types/general.ts";
 import { TileDTO } from "../../types/tile.ts";
@@ -10,6 +11,7 @@ export interface AppEvent {
   gameStoreEntities: EntityDTO[];
   gameStoreOwnPlayerId: string;
   rendererMoveCamera: { x: number; y: number };
+  rendererSelectAnt: AntDTO;
   gameMoveAnt: { id: EntityDTO["id"]; direction: Direction };
 }
 

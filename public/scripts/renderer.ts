@@ -32,6 +32,8 @@ export class Renderer {
   spriteSize = 32;
   animationTime = 0;
 
+  selectedTile: { x: number; y: number } | null = null;
+
   constructor(protected bus: EventBus, protected gameStore: GameStore) {
     const canvas = document.getElementById("map");
     if (!canvas) throw new Error("Unable to load map");
@@ -49,6 +51,10 @@ export class Renderer {
     bus.on("rendererMoveCamera", (pos) => {
       this.moveCamera(pos.x, pos.y);
     });
+
+    bus.on("rendererSelectAnt", (ant) => {
+      this.selectAnt(ant);
+    });
   }
 
   init() {
@@ -62,6 +68,7 @@ export class Renderer {
 
     this.updateCamera(deltaTime);
     this.drawTiles();
+    this.drawSelection();
 
     lastTime = currentTime;
     requestAnimationFrame((c) => this.loop(c, lastTime));
@@ -83,15 +90,15 @@ export class Renderer {
   drawTiles() {
     const baseTileX = Math.floor(this.cameraX);
     const baseTileY = Math.floor(this.cameraY);
-    const startTileX = baseTileX - this.HALF_VIEW_SIZE;
-    const startTileY = baseTileY - this.HALF_VIEW_SIZE;
+    const topLeftTileX = baseTileX - this.HALF_VIEW_SIZE;
+    const topLeftTileY = baseTileY - this.HALF_VIEW_SIZE;
     const offsetX = (this.cameraX - baseTileX) * this.TILE_SIZE;
     const offsetY = (this.cameraY - baseTileY) * this.TILE_SIZE;
 
     for (let i = 0; i <= this.VIEW_SIZE; i++) {
       for (let j = 0; j <= this.VIEW_SIZE; j++) {
-        const x = startTileX + j;
-        const y = startTileY + i;
+        const x = topLeftTileX + j;
+        const y = topLeftTileY + i;
         const tile = this.gameStore.getTile(x, y);
         const canvasX = j * this.TILE_SIZE - offsetX;
         const canvasY = i * this.TILE_SIZE - offsetY;
@@ -175,6 +182,31 @@ export class Renderer {
     }
   }
 
+  drawSelection() {
+    if (!this.selectedTile) return;
+    const baseTileX = Math.floor(this.cameraX);
+    const baseTileY = Math.floor(this.cameraY);
+    const topLeftTileX = baseTileX - this.HALF_VIEW_SIZE;
+    const topLeftTileY = baseTileY - this.HALF_VIEW_SIZE;
+    const cameraOffsetX = (this.cameraX - baseTileX) * this.TILE_SIZE;
+    const cameraOffsetY = (this.cameraY - baseTileY) * this.TILE_SIZE;
+    const offsetX = this.selectedTile.x - topLeftTileX;
+    const offsetY = this.selectedTile.y - topLeftTileY;
+
+    const canvasX = offsetX * this.TILE_SIZE - cameraOffsetX;
+    const canvasY = offsetY * this.TILE_SIZE - cameraOffsetY;
+
+    const prev = this.ctx.lineWidth;
+    if (Math.floor(this.animationTime % 2)) {
+      this.ctx.lineWidth = 3;
+    } else {
+      this.ctx.lineWidth = 2;
+    }
+    this.ctx.strokeStyle = "#9c3400";
+    this.ctx.strokeRect(canvasX, canvasY, this.TILE_SIZE, this.TILE_SIZE);
+    this.ctx.lineWidth = prev;
+  }
+
   drawText(text: string, x: number, y: number, color: string = "black") {
     const prevFillStyle = this.ctx.fillStyle;
     this.ctx.fillStyle = color;
@@ -187,6 +219,11 @@ export class Renderer {
     this.movingCameraTo = { x, y };
     this.movingCameraTimePassed = 0;
     this.isMovingCamera = true;
+  }
+
+  selectAnt(ant: AntDTO) {
+    this.moveCamera(ant.x, ant.y);
+    this.selectedTile = { x: ant.x, y: ant.y };
   }
 
   private lerp(a: number, b: number, t: number) {

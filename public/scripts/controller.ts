@@ -1,9 +1,24 @@
+import { AntDTO } from "../../types/ant.ts";
+import { Direction } from "../../types/general.ts";
 import { EventBus } from "./event-bus.ts";
 import { GameStore } from "./game-store.ts";
 
 export class Controller {
-  protected selectedAntId: string | null = null;
+  protected _selectedAnt: AntDTO | null = null;
   constructor(protected bus: EventBus, protected gameStore: GameStore) {
+  }
+
+  protected get selectedAnt(): Controller["_selectedAnt"] {
+    return this._selectedAnt;
+  }
+
+  protected set selectedAnt(newAnt: AntDTO) {
+    const ants = this.gameStore.getAntsOfPlayer();
+    const isValid = ants.find((a) => a.id === newAnt.id);
+    //todo: what if there is an ant with an id of null?
+    if (isValid) this._selectedAnt = newAnt;
+    else this._selectedAnt = ants[0];
+    this.bus.emit("rendererSelectAnt", this._selectedAnt);
   }
 
   init() {
@@ -25,26 +40,19 @@ export class Controller {
         break;
       }
       case "ArrowLeft": {
-        if (!this.selectedAntId) break;
-        this.bus.emit("gameMoveAnt", { id: this.selectedAntId, direction: "w" });
+        this.sendMoveEvent("w");
         break;
       }
       case "ArrowRight": {
-        if (!this.selectedAntId) break;
-        this.bus.emit("gameMoveAnt", { id: this.selectedAntId, direction: "e" });
-
+        this.sendMoveEvent("e");
         break;
       }
       case "ArrowUp": {
-        if (!this.selectedAntId) break;
-        this.bus.emit("gameMoveAnt", { id: this.selectedAntId, direction: "n" });
-
+        this.sendMoveEvent("n");
         break;
       }
       case "ArrowDown": {
-        if (!this.selectedAntId) break;
-        this.bus.emit("gameMoveAnt", { id: this.selectedAntId, direction: "s" });
-
+        this.sendMoveEvent("s");
         break;
       }
       case "Escape": {
@@ -57,10 +65,15 @@ export class Controller {
     }
   }
 
-  cycleAntSelection(direction: 1 | -1) {
+  protected sendMoveEvent(direction: Direction, id = this.selectedAnt?.id) {
+    if (!id) return;
+    this.bus.emit("gameMoveAnt", { id, direction });
+  }
+
+  protected cycleAntSelection(direction: 1 | -1) {
     const ants = this.gameStore.getAntsOfPlayer();
 
-    const currentIndex = ants.findIndex((a) => a.id === this.selectedAntId);
+    const currentIndex = ants.findIndex((a) => a.id === this.selectedAnt?.id);
 
     let nextIndex = 0;
 
@@ -70,6 +83,6 @@ export class Controller {
       nextIndex = (currentIndex + direction + ants.length) % ants.length;
     }
 
-    this.selectedAntId = ants[nextIndex].id;
+    this.selectedAnt = ants[nextIndex];
   }
 }

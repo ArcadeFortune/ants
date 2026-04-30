@@ -119,10 +119,10 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
         case "move":
           {
             //TODO; Broadcast per-player vision/updates (only what they should see)
-            console.log(`Client wants to move ${message.antId} to ${message.direction}`);
+            console.log(`Client wants to move ${message.body.antId} to ${message.body.direction}`);
             const player = socketPlayers.get(socket);
             if (!player) throw new Error("Player not found.");
-            const ant = game.moveAnt(player, message.antId, message.direction);
+            const ant = game.moveAnt(player, message.body.antId, message.body.direction);
             socket.send(serverEvent({
               type: "multiple",
               body: [

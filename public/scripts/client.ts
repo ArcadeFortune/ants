@@ -4,14 +4,23 @@ import { EventBus } from "./event-bus.ts";
 export class Client {
   protected ws: WebSocket | null = null;
 
-  constructor(protected bus: EventBus) {}
+  constructor(protected bus: EventBus) {
+    this.bus.on("gameMoveAnt", (payload) => {
+      this.ws?.send(clientMessage({
+        type: "move",
+        body: {
+          antId: payload.id,
+          direction: payload.direction,
+        },
+      }));
+    });
+  }
 
   init(url: string = "ws://localhost:6969") {
     this.ws = new WebSocket(url);
     this.bus.emit("clientConnecting", undefined);
     this.ws.onopen = () => {
       this.bus.emit("clientConnected", undefined);
-      this.initListeners();
     };
     this.ws.onmessage = (payload) => {
       try {
@@ -24,19 +33,6 @@ export class Client {
     };
     this.ws.onerror = () => {};
     this.ws.onclose = () => {};
-  }
-
-  protected initListeners() {
-    this.bus.on("gameMoveAnt", (payload) => {
-      this.ensureWs();
-      this.ws.send(clientMessage({
-        type: "move",
-        body: {
-          antId: payload.id,
-          direction: payload.direction,
-        },
-      }));
-    });
   }
 
   protected ensureWs(): asserts this is { ws: WebSocket } {
