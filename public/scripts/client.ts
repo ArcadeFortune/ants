@@ -14,6 +14,9 @@ export class Client {
         },
       }));
     });
+    this.bus.on("criticalError", (reason) => {
+      this.ws?.close(4000, reason.message);
+    });
   }
 
   init(url: string = `${location.protocol === "https:" ? "wss" : "ws"}://${location.hostname}${location.hostname === "localhost" ? ":6969" : ""}`) {

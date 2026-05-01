@@ -40,7 +40,7 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
       const url = new URL(req.url);
       let filepath = decodeURIComponent(url.pathname);
       if (filepath === "/" || filepath === "") filepath = "index.html";
-      console.log("[Request] %s %s", req.method, filepath);
+      console.log("[HTTP] %s 200 %s", req.method, filepath);
       //serve from memory
       const memoryFile = files?.outputFiles?.find((f) => f.path === path.join(Deno.cwd(), "public", filepath));
       if (memoryFile && memoryFile.contents) return new Response(memoryFile.contents);
@@ -54,37 +54,39 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
         return new Response(file.readable);
       }
     } catch (e) {
-      console.warn("[Warning] 404 File not found, %s", e instanceof Error ? e.message : String(e));
+      console.warn("[HTTP] ERROR 404 File not found, %s", e instanceof Error ? e.message : String(e));
       return new Response("Not found", { status: 404 });
     }
   }
-  console.log("[Request] WS %s", req.url);
   const { socket, response } = Deno.upgradeWebSocket(req);
 
   socket.addEventListener("open", () => {
     try {
+      const player = game.addPlayer(generateUUID());
+
+      console.log("[GAME] ADD_PLAYER 200 %s", player.id);
+
+      clients.forEach((s) =>
+        s.send(serverEvent({
+          type: "join",
+          body: {
+            hiveId: player.id,
+          },
+        }))
+      );
+      clients.add(socket);
+      socket.send(serverEvent({
+        type: "playerInfo",
+        body: {
+          id: player.id,
+        },
+      }));
       socket.send(serverEvent(testServerTilesEvent));
       socket.send(serverEvent(testServerEntitiesEvent));
-      socket.send(serverEvent(testServerPlayerInfoEvent));
+
+      playerSockets.set(player.id, socket);
+      socketPlayers.set(socket, player.id);
       return;
-      // const playerId = generateUUID();
-      // const player = game.addPlayer(playerId);
-      // const initialHive = player.hives[0];
-      // if (!initialHive) return socket.send(serverEvent({ type: "error", body: { code: 500, message: "Something went wrong with the hive creation..." } }));
-      // playerSockets.set(playerId, socket);
-      // socketPlayers.set(socket, playerId);
-      // console.log(`Player ${playerId} connected`);
-
-      // clients.forEach((s) =>
-      //   s.send(serverEvent({
-      //     type: "join",
-      //     body: {
-      //       hiveId: initialHive.id,
-      //     },
-      //   }))
-      // );
-      // clients.add(socket);
-
       // socket.send(serverEvent({
       //   type: "multiple",
       //   body: [
@@ -108,6 +110,7 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
           message: e instanceof Error ? e.message : String(e),
         },
       }));
+      socket.close();
     }
   });
 
@@ -167,8 +170,9 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
     }
   });
 
-  socket.addEventListener("close", (_event) => {
+  socket.addEventListener("close", (e) => {
     try {
+      console.log("[WS] CLOSE %s %s", e.code, e.reason);
       // Handle disconnects (mark player as offline; possibly reassign hive ownership or keep until timeout)
       const playerId = socketPlayers.get(socket);
       if (!playerId) return;
@@ -196,7 +200,7 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
   });
 
   socket.addEventListener("error", (_event) => {
-    console.error("[Error] 500 Socket had an error.");
+    console.error("[WS] ERROR 500 Socket had an error.");
     // Handle disconnects (mark player as offline; possibly reassign hive ownership or keep until timeout)
     const playerId = socketPlayers.get(socket);
     if (!playerId) return;
@@ -214,6 +218,7 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
     game.removePlayer(playerId);
   });
 
+  console.log("[WS] CONNECT 200 %s", req.url);
   return response;
 });
 

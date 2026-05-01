@@ -1,6 +1,6 @@
 import { Entity } from "./entity.ts";
 import { Player } from "./player.ts";
-import { Tile } from "./tile.ts";
+import { Coordinate, Tile } from "./tile.ts";
 
 export enum Loglevel {
   Critical = 1,
@@ -22,6 +22,6 @@ export interface Board {
   height: number;
   tiles: Tile[][];
   entities: Map<Player["id"], Entity>;
-  // hives: Map<string, Hive>;
   players: Map<string, Player>;
+  entitiesByTileIndex: Map<Coordinate, Entity[]>;
 }

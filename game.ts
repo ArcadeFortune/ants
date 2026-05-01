@@ -1,10 +1,10 @@
 import { generateTiles, Tile, TileType } from "./types/tile.ts";
-import { findRandomEmptyPosition, getDirectionDelta } from "./utils.ts";
-import { Board, Direction } from "./types/general.ts";
+import { Board, Direction, Position } from "./types/general.ts";
 import { Entity } from "./types/entity.ts";
 import { Player } from "./types/player.ts";
 import { Ant } from "./types/ant.ts";
 import { Hive } from "./types/hive.ts";
+import { coordinateToString } from "./utils.ts";
 
 export class Game {
   board: Board;
@@ -16,6 +16,7 @@ export class Game {
       tiles: generateTiles(200, 200),
       players: new Map(),
       entities: new Map(),
+      entitiesByTileIndex: new Map(),
     };
     // Initialize some food and walls randomly
     for (let y = 0; y < 200; y++) {
@@ -23,34 +24,44 @@ export class Game {
         const rand = Math.random();
         const tile = this.board.tiles[y][x];
         if (rand < 0.05) {
-          tile.setType(TileType.Wall);
+          tile.type = TileType.Wall;
         } else if (rand < 0.15) {
-          tile.setType(TileType.Food);
+          // tile.setType(TileType.Food);
+          ///todo: add food entity
         }
       }
     }
   }
 
-  addPlayer(playerId: string) {
-    const pos = findRandomEmptyPosition(this.board.tiles);
-    if (!pos) throw new Error("No empty position for hive");
+  /**
+   * store player id
+   * finds random position on map to place a hive
+   * adds ants to that hive
+   * @throws if no space is available
+   * @returns Player
+   */
+  addPlayer(playerId: Player["id"]) {
+    const maxTries = 200;
+    let tries = 0;
+    let position: Position | undefined;
+    //todo: add max entity count limit
+
+    for (tries = 0; tries < maxTries && !position; tries++) {
+      const t = this.board.tiles[Math.floor(Math.random() * this.board.height)][Math.floor(Math.random() * this.board.width)];
+      if (t.type === TileType.Ground) {
+        position = { x: t.x, y: t.y };
+      }
+    }
+    if (!position) throw new Error("No empty position for hive");
     const player = new Player(playerId);
     this.board.players.set(player.id, player);
 
-    const hive = new Hive(playerId, pos.x, pos.y);
-    const ants = [new Ant(playerId, pos.x, pos.y), new Ant(playerId, pos.x, pos.y)];
-    this.board.entities.set(hive.id, hive);
-    ants.forEach(a => this.board.entities.set(a.id, a));
-    
-    this.board.tiles[pos.y][pos.x].setType(TileType.Hive, hive);
-    // player.ants.forEach((a) => this.getVision(a));
+    this.addEntity(new Hive(playerId, position.x, position.y));
+    const ants = [new Ant(playerId, position.x, position.y), new Ant(playerId, position.x, position.y)];
+    ants.forEach((a) => this.addEntity(a));
 
     return player;
   }
-
-  // getHive(playerId: string) {
-  //   return this.board.hives.get(playerId);
-  // }
 
   removePlayer(playerId: string) {
     const player = this.board.players.get(playerId);
@@ -63,6 +74,24 @@ export class Game {
     // player.hives.length = 0;
     player.clear();
     this.board.players.delete(player.id);
+  }
+
+  addEntity(entity: Entity) {
+    this.board.entities.set(entity.id, entity);
+
+    const coordinate = coordinateToString(entity);
+    const entities = this.board.entitiesByTileIndex.get(coordinate) ?? [];
+    entities.push(entity);
+    this.board.entitiesByTileIndex.set(coordinate, entities);
+  }
+
+  removeEntity(entity: Entity) {
+    this.board.entities.delete(entity.id);
+
+    const coordinate = coordinateToString(entity);
+    const entities = this.board.entitiesByTileIndex.get(coordinate) ?? [];
+    const filtered = entities.filter((e) => e.id !== entity.id);
+    this.board.entitiesByTileIndex.set(coordinate, filtered);
   }
 
   /**

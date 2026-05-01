@@ -9,7 +9,7 @@
     "lib": ["dom", "dom.iterable", "es2020", "deno.ns", "deno.unstable"]
   },
   "tasks": {
-    "dev": "deno --env -A --unstable-bundle --watch --watch-exclude='.*/**/' ./server.ts",
+    "dev": "deno --inspect -A --env --unstable-bundle --watch --watch-exclude='.*/**/' ./server.ts",
     "build": "deno bundle ./public/index.html --outdir=./build --platform=browser --minify",
     "test": "deno test -A"
   },

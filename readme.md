@@ -7,3 +7,7 @@ A Hive can contain a list of ant IDs, If an ant walks into a hive of the same ow
 ## Client
 
 Using WASD, the user can select ants.
+
+## Socket closing errors
+
+- `4000` Server did not give ants to own player ID

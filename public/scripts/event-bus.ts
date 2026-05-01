@@ -11,9 +11,11 @@ export interface AppEvent {
   gameStoreEntities: EntityDTO[];
   gameStoreOwnPlayerId: string;
   gameStoreInitialized: void;
+  gameOver: void;
   rendererMoveCamera: { x: number; y: number };
   rendererSelectAnt: AntDTO;
   gameMoveAnt: { id: EntityDTO["id"]; direction: Direction };
+  criticalError: Error;
 }
 
 type listeners<E> = {
@@ -44,7 +46,9 @@ export class EventBus<E extends AppEvent = AppEvent> {
   }
 
   emit<K extends keyof E>(type: K, payload: E[K]) {
-    console.debug("[New Event] %s %o", type, payload);
+    if (type === "criticalError") alert(payload);
+    else if (payload instanceof Error) console.error("[Error] %s %o", type, payload);
+    else console.debug("[New Event] %s %o", type, payload);
     this.listeners[type]?.forEach((l) => {
       try {
         l(payload);

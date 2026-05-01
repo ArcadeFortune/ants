@@ -1,6 +1,4 @@
-import { Ant } from "./ant.ts";
 import { Entity } from "./entity.ts";
-import { Hive } from "./hive.ts";
 
 export type Coordinate = `${number},${number}`;
 
@@ -27,25 +25,15 @@ export class Tile {
   seenBy: Map<string, VisionTile> = new Map(); // ants/hives that have seen it. will not send tile infos again to these clients. gets cleared upon any modification
   // seeingBy: Map<string, VisionTile> = new Map(); // ants/hives that are seeing it. modifying tiletype immediately informs these clients. gets cleared upon moving away
   seeingBy: Entity[] = []; // ants/hives that are seeing it. modifying tiletype immediately informs these clients. gets cleared upon moving away
-  hive?: Hive;
-  ant?: Ant;
   //todo: food
-  constructor(public type: TileType = TileType.Ground, public x: number, public y: number) {}
+  constructor(private _type: TileType = TileType.Ground, public x: number, public y: number) {}
 
-  setType(newType: TileType.Hive, hive: Hive): void;
-  setType(newType: Exclude<TileType, TileType.Hive>, hive?: undefined): void;
-  setType(newType: TileType, hive?: Hive) {
-    if (newType === TileType.Hive && !hive) {
-      throw new Error("Hive data is required for Hive tiles");
-    }
+  get type() {
+    return this._type;
+  }
 
-    if (hive && newType !== TileType.Hive) {
-      throw new Error("Cannot apply UUID to a non-hive tile");
-    }
-
-    this.type = newType;
-    this.hive = hive;
-    // this.seenBy.clear(); //todo: inform these clients of new tile
+  set type(newType) {
+    this._type = newType;
   }
 }
 
@@ -65,9 +53,6 @@ export class TileDTO {
     this.type = tile.type;
     this.x = tile.x;
     this.y = tile.y;
-    this.hiveId = tile.hive?.id;
-    this.antId = tile.ant?.id;
-    this.playerId = tile.hive?.playerId || tile.ant?.playerId;
   }
 }
 

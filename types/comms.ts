@@ -62,7 +62,7 @@ type BaseServerEvent = ServerPlayerInfoEvent | ServerJoinEvent | ServerLeaveEven
 export type ServerEvent = BaseServerEvent | ServerMultipleEvents;
 
 export function serverEvent(e: ServerEvent): string {
-  console.log("[Server Event] %s", e.type);
+  // console.log("[WS] SEND_EVENT 200 %s", e.type);
   return JSON.stringify(e);
 }
 

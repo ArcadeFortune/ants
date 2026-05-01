@@ -7,7 +7,11 @@ export class Controller {
   protected _selectedAnt: AntDTO | null = null;
   constructor(protected bus: EventBus, protected gameStore: GameStore) {
     bus.once("gameStoreInitialized", () => {
-      this.selectAnyAnt();
+      try {
+        this.selectAnyAnt();
+      } catch (e) {
+        console.warn(e instanceof Error ? e.message : String(e));
+      }
     });
   }
 
@@ -68,6 +72,10 @@ export class Controller {
       }
       case "Escape": {
         debugger;
+        break;
+      }
+      case "r": {
+        if (e.ctrlKey) return location.reload();
         break;
       }
       default: {
