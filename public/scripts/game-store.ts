@@ -7,6 +7,7 @@ export class GameStore {
   protected tiles = new Map<Coordinate, TileDTO>();
   protected entities = new Map<EntityDTO["id"], EntityDTO>();
   protected playerId: string = "";
+  protected _isInitialized = false;
 
   protected entitiesByTileIndex = new Map<Coordinate, EntityDTO[]>();
 
@@ -14,20 +15,41 @@ export class GameStore {
     bus.on("gameStoreTiles", (t) => this.saveTiles(t));
     bus.on("gameStoreEntities", (entities) => this.setEntities(entities));
     bus.on("gameStoreOwnPlayerId", (playerId) => this.setPlayerId(playerId));
+    bus.on("gameStoreInitialized", () => this.bus.emit("rendererMoveCamera", this.calculateCenter()));
   }
 
   coordsToId(x: number, y: number): Coordinate {
     return `${x},${y}`;
   }
 
-  protected saveTiles(tiles: TileDTO[]) {
-    if (this.tiles.size === 0) {
-      this.bus.emit("rendererMoveCamera", this.calculateCenter(tiles));
+  get isInitialized() {
+    return this._isInitialized;
+  }
+
+  /**
+   * check if necessary values are set
+   * if the values are set for the first time, event 'gameStoreInitialized' is emitted
+   */
+  protected checkInitialized() {
+    if (this.isInitialized) return true;
+    else if (
+      this.tiles.size === 0 ||
+      this.entities.size === 0 ||
+      !this.playerId
+    ) return false;
+    else {
+      this._isInitialized = true;
+      this.bus.emit("gameStoreInitialized", undefined);
+      return true;
     }
+  }
+
+  protected saveTiles(tiles: TileDTO[]) {
     for (const tile of tiles) {
       const id = this.coordsToId(tile.x, tile.y);
       this.tiles.set(id, tile);
     }
+    this.checkInitialized();
   }
 
   getPlayerId() {
@@ -36,6 +58,7 @@ export class GameStore {
 
   protected setPlayerId(playerId: string) {
     this.playerId = playerId;
+    this.checkInitialized();
   }
 
   protected setEntities(entities: EntityDTO[]) {
@@ -47,6 +70,7 @@ export class GameStore {
       entities.push(e);
       this.entitiesByTileIndex.set(coordinate, entities);
     });
+    this.checkInitialized();
   }
 
   getEntityById(id: EntityDTO["id"]) {
@@ -93,7 +117,7 @@ export class GameStore {
     return result;
   }
 
-  protected calculateCenter(tiles: TileDTO[]) {
+  protected calculateCenter(tiles = [...this.tiles.values()]) {
     let xSum = 0;
     let ySum = 0;
     tiles.forEach((tile) => {

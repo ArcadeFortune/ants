@@ -10,6 +10,7 @@ export interface AppEvent {
   gameStoreTiles: TileDTO[];
   gameStoreEntities: EntityDTO[];
   gameStoreOwnPlayerId: string;
+  gameStoreInitialized: void;
   rendererMoveCamera: { x: number; y: number };
   rendererSelectAnt: AntDTO;
   gameMoveAnt: { id: EntityDTO["id"]; direction: Direction };
@@ -44,6 +45,12 @@ export class EventBus<E extends AppEvent = AppEvent> {
 
   emit<K extends keyof E>(type: K, payload: E[K]) {
     console.debug("[New Event] %s %o", type, payload);
-    this.listeners[type]?.forEach((l) => l(payload));
+    this.listeners[type]?.forEach((l) => {
+      try {
+        l(payload);
+      } catch (e: unknown) {
+        console.error(e instanceof Error ? e.message : String(e));
+      }
+    });
   }
 }

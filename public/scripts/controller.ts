@@ -6,6 +6,9 @@ import { GameStore } from "./game-store.ts";
 export class Controller {
   protected _selectedAnt: AntDTO | null = null;
   constructor(protected bus: EventBus, protected gameStore: GameStore) {
+    bus.once("gameStoreInitialized", () => {
+      this.selectAnyAnt();
+    });
   }
 
   protected get selectedAnt(): Controller["_selectedAnt"] {
@@ -22,6 +25,12 @@ export class Controller {
     this.bus.emit("rendererSelectAnt", this._selectedAnt);
   }
 
+  protected selectAnyAnt() {
+    const ants = this.gameStore.getAntsOfPlayer();
+    if (!ants.length) throw new Error("[Error] No ant available");
+    this.selectedAnt = ants[0];
+  }
+
   init() {
     document.addEventListener("keydown", (e) => this.handleKeyPress(e));
   }
@@ -30,6 +39,7 @@ export class Controller {
   }
 
   protected handleKeyPress(e: KeyboardEvent) {
+    e.preventDefault();
     console.log("e.key --->", e.key);
     switch (e.key) {
       case "d": {

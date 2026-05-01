@@ -9,7 +9,7 @@ import { generateUUID } from "./utils.ts";
 import { debounce } from "@std/async";
 import { testServerEntitiesEvent, testServerPlayerInfoEvent, testServerTilesEvent } from "./tests/payloads.ts";
 
-const loglevel: Loglevel = (Number(Deno.env.get("LOGLEVEL")) ?? Loglevel.Warning) as Loglevel;
+const loglevel: Loglevel = (Number(Deno.env.get("LOGLEVEL") || Loglevel.Warning)) as Loglevel;
 const port = 6969;
 const game = new Game();
 const playerSockets = new Map<string, WebSocket>();
@@ -19,7 +19,7 @@ const clients = new Set<WebSocket>();
 
 let files: Deno.bundle.Result | undefined;
 const buildFrontend = debounce(async (event?: Deno.FsEvent) => {
-  if (!Deno.bundle && typeof Deno.bundle !== "function") return;
+  if (!Deno.bundle || typeof Deno.bundle !== "function") return;
   if (event) console.log("[%s] %s", event.kind, event.paths[0] + ": Building Frontend...");
   try {
     files = await Deno.bundle({
@@ -220,7 +220,7 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
 buildFrontend();
 
 if (loglevel >= Loglevel.Debug) {
-  const watcher = Deno.watchFs(["./public"]);
+  const watcher = Deno.watchFs(["./public/"]);
 
   for await (const event of watcher) {
     buildFrontend(event);
