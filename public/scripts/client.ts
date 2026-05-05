@@ -63,12 +63,13 @@ export class Client {
         break;
       }
       case "playerInfo": {
-        const playerId = message.body.id;
+        const playerId = message.body.player.id;
         this.bus.emit("gameStoreOwnPlayerId", playerId);
         break;
       }
       default: {
-        console.warn(`Unknown message "${message.type}": ${message.body}`);
+        console.warn("Unknown message '%s': %o", message.type, message.body);
+        if (message.type === "error" && message.body.code === 500) this.bus.panic(message.body.message);
       }
     }
   }

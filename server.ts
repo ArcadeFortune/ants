@@ -4,7 +4,7 @@ import { AntDTO } from "./types/ant.ts";
 import { ClientMessage, ServerEvent, serverEvent } from "./types/comms.ts";
 import { Loglevel } from "./types/general.ts";
 import { PlayerDTO } from "./types/player.ts";
-import { TileDTO } from "./types/tile.ts";
+import { TileDTO, TileType } from "./types/tile.ts";
 import { generateUUID } from "./utils.ts";
 import { debounce } from "@std/async";
 import { EntityDTO } from "./types/entity.ts";
@@ -81,7 +81,7 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
       socket.send(serverEvent({
         type: "playerInfo",
         body: {
-          player: new PlayerDTO(player),
+          player: new PlayerDTO(player)
         },
       }));
       const playersHive = game.board.entities.get(player.hiveIds[0]);
