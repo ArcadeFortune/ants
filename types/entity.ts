@@ -1,13 +1,29 @@
-import { Ant, AntDTO } from "./ant.ts";
-import { Hive, HiveDTO } from "./hive.ts";
+import { generateUUID } from "../utils.ts";
+import { Ant } from "./ant.ts";
+import { Hive } from "./hive.ts";
 
-export interface BaseEntity {
-  type: string;
+export type GameEntity = Hive | Ant;
+
+export class Entity {
+  readonly id = generateUUID();
+  type: "hive" | "ant" | "generic" = "generic";
+
+  constructor(public playerId: string, public x: number, public y: number) {
+  }
+}
+
+export class EntityDTO {
+  id: Entity["id"];
+  type: Entity["type"];
   playerId: string;
   x: number;
   y: number;
+
+  constructor(entity: Entity) {
+    this.id = entity.id;
+    this.type = entity.type;
+    this.playerId = entity.playerId;
+    this.x = entity.x;
+    this.y = entity.y;
+  }
 }
-
-export type Entity = Hive | Ant;
-
-export type EntityDTO = HiveDTO | AntDTO;

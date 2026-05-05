@@ -2,14 +2,11 @@ import * as path from "@std/path";
 import { Game } from "./game.ts";
 import { AntDTO } from "./types/ant.ts";
 import { ClientMessage, ServerEvent, serverEvent } from "./types/comms.ts";
-import { Loglevel } from "./types/general.ts";
 import { PlayerDTO } from "./types/player.ts";
 import { TileDTO, TileType } from "./types/tile.ts";
-import { generateUUID } from "./utils.ts";
+import { generateUUID, toEntityDTO } from "./utils.ts";
 import { debounce } from "@std/async";
-import { EntityDTO } from "./types/entity.ts";
 
-const loglevel: Loglevel = (Number(Deno.env.get("LOGLEVEL") || Loglevel.Warning)) as Loglevel;
 const isProd = Deno.args.includes("--prod");
 const port = 6969;
 const game = new Game();
@@ -17,7 +14,6 @@ const playerSockets = new Map<string, WebSocket>();
 const socketPlayers = new Map<WebSocket, string>();
 
 const clients = new Set<WebSocket>();
-
 let files: Deno.bundle.Result | undefined;
 const buildFrontend = debounce(async (event?: Deno.FsEvent) => {
   if (!Deno.bundle || typeof Deno.bundle !== "function" || isProd) return;
@@ -28,7 +24,7 @@ const buildFrontend = debounce(async (event?: Deno.FsEvent) => {
       outputDir: "./memory",
       write: false,
       platform: "browser",
-      minify: loglevel < 5,
+      minify: isProd,
     });
   } catch (e) {
     console.error(e);
@@ -81,7 +77,7 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
       socket.send(serverEvent({
         type: "playerInfo",
         body: {
-          player: new PlayerDTO(player)
+          player: new PlayerDTO(player),
         },
       }));
       const playersHive = game.board.entities.get(player.hiveIds[0]);
@@ -94,7 +90,7 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
             {
               type: "entities",
               body: {
-                entities: vision.entities, //todo: use dto
+                entities: vision.entities.map(toEntityDTO),
               },
             },
             {
@@ -141,19 +137,27 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
             const player = socketPlayers.get(socket);
             if (!player) throw new Error("Player not found.");
             const ant = game.moveAnt(player, message.body.antId, message.body.direction);
+            const vision = game.getTilesAndEntitesAroundEntity(ant);
             socket.send(serverEvent({
               type: "multiple",
               body: [
                 {
-                  type: "yourAntMoved",
+                  type: "antMoved",
                   body: {
-                    ant: new AntDTO(ant),
+                    antId: ant.id,
+                    direction: message.body.direction,
                   },
                 },
                 {
                   type: "tiles",
                   body: {
-                    tiles: game.getVision(ant),
+                    tiles: vision.tiles.map((t) => new TileDTO(t)),
+                  },
+                },
+                {
+                  type: "entities",
+                  body: {
+                    entities: vision.entities.filter((e) => e.id !== ant.id).map(toEntityDTO),
                   },
                 },
               ],
@@ -232,7 +236,7 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
 
 buildFrontend();
 
-if (loglevel >= Loglevel.Debug && !isProd) {
+if (!isProd) {
   const watcher = Deno.watchFs(["./public/"]);
 
   for await (const event of watcher) {

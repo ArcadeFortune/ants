@@ -1,24 +1,16 @@
-import { generateUUID } from "../utils.ts";
-import { BaseEntity } from "./entity.ts";
+import { Entity, EntityDTO } from "./entity.ts";
 
-export class Hive implements BaseEntity {
-  readonly type = "hive";
-  readonly id: string = generateUUID();
+export class Hive extends Entity {
+  override readonly type = "hive";
   tilesInVision: Set<string> = new Set();
-  constructor(public playerId: string, public x: number, public y: number) {
+  constructor(playerId: string, x: number, y: number) {
+    super(playerId, x, y);
   }
 }
 
-export class HiveDTO implements BaseEntity {
-  readonly type = "hive";
-  id: string;
-  playerId: string;
-  x: number;
-  y: number;
+export class HiveDTO extends EntityDTO {
+  override readonly type = "hive";
   constructor(hive: Hive) {
-    this.id = hive.id;
-    this.playerId = hive.playerId;
-    this.x = hive.x;
-    this.y = hive.y;
+    super(hive);
   }
 }

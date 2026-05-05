@@ -1,4 +1,7 @@
+import { Ant, AntDTO } from "./types/ant.ts";
+import { Entity, EntityDTO } from "./types/entity.ts";
 import { Direction, Position } from "./types/general.ts";
+import { Hive, HiveDTO } from "./types/hive.ts";
 import { Coordinate, Tile } from "./types/tile.ts";
 
 export function coordinateToString(entity: { x: number; y: number }): Coordinate {
@@ -58,4 +61,17 @@ export function getNearbyTiles(board: Tile[][], antX: number, antY: number, radi
 
 export function generateUUID(): string {
   return crypto.randomUUID();
+}
+
+export function toEntityDTO(entity: Entity): EntityDTO {
+  switch (entity.type) {
+    case "ant":
+      return new AntDTO(entity as Ant);
+
+    case "hive":
+      return new HiveDTO(entity as Hive);
+
+    default:
+      return new EntityDTO(entity);
+  }
 }

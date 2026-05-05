@@ -11,6 +11,7 @@ export interface AppEvent {
   gameStoreEntities: EntityDTO[];
   gameStoreOwnPlayerId: string;
   gameStoreInitialized: void;
+  gameStoreAntMoved: { antId: AntDTO["id"]; direction: Direction };
   gameOver: void;
   rendererMoveCamera: { x: number; y: number };
   rendererSelectAnt: AntDTO;

@@ -62,6 +62,10 @@ export class Client {
         this.bus.emit("gameStoreEntities", message.body.entities);
         break;
       }
+      case "antMoved": {
+        this.bus.emit("gameStoreAntMoved", message.body);
+        break;
+      }
       case "playerInfo": {
         const playerId = message.body.player.id;
         this.bus.emit("gameStoreOwnPlayerId", playerId);

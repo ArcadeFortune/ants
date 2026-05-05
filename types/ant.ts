@@ -1,31 +1,21 @@
-import { generateUUID } from "../utils.ts";
-import { BaseEntity } from "./entity.ts";
+import { Entity, EntityDTO } from "./entity.ts";
 
-export class Ant implements BaseEntity {
-  readonly type = "ant";
-  readonly id = generateUUID();
+export class Ant extends Entity {
+  override readonly type = "ant";
   carrying = false;
   lastMove = 0;
   tilesInVision: Set<string> = new Set();
 
-  constructor(
-    public readonly playerId: string,
-    public x: number,
-    public y: number,
-  ) {}
+  constructor(playerId: string, x: number, y: number) {
+    super(playerId, x, y);
+  }
 }
 
-export class AntDTO implements BaseEntity {
-  readonly type = "ant";
-  readonly id: string;
-  readonly playerId: string;
-  x: number;
-  y: number;
-
+export class AntDTO extends EntityDTO {
+  override readonly type = "ant";
+  carrying: boolean;
   constructor(ant: Ant) {
-    this.id = ant.id;
-    this.playerId = ant.playerId;
-    this.x = ant.x;
-    this.y = ant.y;
+    super(ant);
+    this.carrying = ant.carrying;
   }
 }

@@ -4,7 +4,7 @@ import { Entity } from "./types/entity.ts";
 import { Player } from "./types/player.ts";
 import { Ant } from "./types/ant.ts";
 import { Hive } from "./types/hive.ts";
-import { coordinateToString } from "./utils.ts";
+import { coordinateToString, getDirectionDelta } from "./utils.ts";
 
 export class Game {
   board: Board;
@@ -174,9 +174,11 @@ export class Game {
   moveAnt(playerId: string, antId: string, direction: Direction): Ant {
     const player = this.board.players.get(playerId);
     if (!player) throw new Error("Player does not exist.");
-    const ant = player.ants.find((a) => a.id === antId);
-    if (!ant) throw new Error("Player does not own this ant.");
-    // const hive = this.board.hives.get(hiveId);
+    const ant = this.board.entities.get(antId);
+    if (!ant) throw new Error("Ant does not exist");
+    if (ant.type !== "ant") throw new Error("This is not an ant");
+    if (ant.playerId !== player.id) throw new Error("Player does not own this ant.");
+
     // const now = Date.now();
     // if (now - ant.lastMove < 2000) return false; // cooldown
 
@@ -185,11 +187,11 @@ export class Game {
     const newX = ant.x + delta.x;
     const newY = ant.y + delta.y;
 
-    if (newX < 0 || newX >= this.board.width || newY < 0 || newY >= this.board.height) throw new Error("Cannot walk outside the map.");
+    if (newX < 0 || newX >= this.board.width || newY < 0 || newY >= this.board.height) throw new Error("Cannot walk outside the map."); //todo: teleport to other side
+
     const tile = this.board.tiles[newY][newX];
     if (tile.type === TileType.Wall) throw new Error("Cannot walk into a wall.");
 
-    // // If moving to food and not carrying, pick up
     // if (tile.type === TileType.Food && !ant.carrying) {
     //   ant.carrying = true;
     //   this.board.tiles[newY][newX].setType(TileType.Empty);
@@ -203,9 +205,6 @@ export class Game {
     // Move ant
     ant.x = newX;
     ant.y = newY;
-
-    tile.type = TileType.Ant;
-    tile.ant = ant;
 
     // ant.lastMove = now;
 

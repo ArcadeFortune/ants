@@ -1,4 +1,4 @@
-import { Entity } from "./entity.ts";
+import { Entity, GameEntity } from "./entity.ts";
 import { Player } from "./player.ts";
 import { Coordinate, Tile } from "./tile.ts";
 
@@ -21,7 +21,7 @@ export interface Board {
   width: number;
   height: number;
   tiles: Tile[][];
-  entities: Map<Player["id"], Entity>;
+  entities: Map<Player["id"], GameEntity>;
   players: Map<string, Player>;
-  entitiesByTileIndex: Map<Coordinate, Entity[]>;
+  entitiesByTileIndex: Map<Coordinate, GameEntity[]>;
 }

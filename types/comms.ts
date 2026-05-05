@@ -1,5 +1,5 @@
 import { TileDTO } from "./tile.ts";
-import { AntDTO } from "./ant.ts";
+import { Ant, AntDTO } from "./ant.ts";
 import { PlayerDTO } from "./player.ts";
 import { Direction } from "./general.ts";
 import { EntityDTO } from "./entity.ts";
@@ -40,9 +40,10 @@ interface ServerEntitiesEvent {
 }
 
 interface ServerOwnAntMovedEvent {
-  type: "yourAntMoved";
+  type: "antMoved";
   body: {
-    ant: AntDTO;
+    antId: AntDTO["id"];
+    direction: Direction;
   };
 }
 
