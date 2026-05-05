@@ -1,9 +1,9 @@
 import { generateUUID } from "../utils.ts";
-import { Ant } from "./ant.ts";
-import { Hive } from "./hive.ts";
+import { Ant, AntDTO } from "./ant.ts";
+import { Hive, HiveDTO } from "./hive.ts";
 
 export type GameEntity = Hive | Ant;
-
+export type GameEntityDTO = HiveDTO | AntDTO;
 export class Entity {
   readonly id = generateUUID();
   type: "hive" | "ant" | "generic" = "generic";

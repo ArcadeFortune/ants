@@ -1,5 +1,5 @@
 import { AntDTO } from "../../types/ant.ts";
-import { EntityDTO } from "../../types/entity.ts";
+import { GameEntityDTO } from "../../types/entity.ts";
 import { Direction } from "../../types/general.ts";
 import { TileDTO } from "../../types/tile.ts";
 
@@ -8,14 +8,14 @@ export interface AppEvent {
   clientConnected: void;
   clientError: string;
   gameStoreTiles: TileDTO[];
-  gameStoreEntities: EntityDTO[];
+  gameStoreEntities: GameEntityDTO[];
   gameStoreOwnPlayerId: string;
   gameStoreInitialized: void;
   gameStoreAntMoved: { antId: AntDTO["id"]; direction: Direction };
   gameOver: void;
   rendererMoveCamera: { x: number; y: number };
-  rendererSelectAnt: AntDTO;
-  gameMoveAnt: { id: EntityDTO["id"]; direction: Direction };
+  rendererSelectAnt: GameEntityDTO;
+  gameMoveAnt: { id: GameEntityDTO["id"]; direction: Direction };
   criticalError: Error;
 }
 

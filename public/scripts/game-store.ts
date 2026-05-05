@@ -1,5 +1,5 @@
 import { AntDTO } from "../../types/ant.ts";
-import { EntityDTO } from "../../types/entity.ts";
+import { GameEntityDTO } from "../../types/entity.ts";
 import { Direction } from "../../types/general.ts";
 import { Coordinate, TileDTO, TileType } from "../../types/tile.ts";
 import { coordinateToString, getDirectionDelta } from "../../utils.ts";
@@ -7,11 +7,11 @@ import { EventBus } from "./event-bus.ts";
 
 export class GameStore {
   protected tiles = new Map<Coordinate, TileDTO>();
-  protected entities = new Map<EntityDTO["id"], EntityDTO>();
+  protected entities = new Map<GameEntityDTO["id"], GameEntityDTO>();
   protected _playerId: string = "";
   protected _isInitialized = false;
 
-  protected entitiesByTileIndex = new Map<Coordinate, Set<EntityDTO["id"]>>();
+  protected entitiesByTileIndex = new Map<Coordinate, Set<GameEntityDTO["id"]>>();
 
   constructor(protected bus: EventBus) {
     bus.on("gameStoreTiles", (t) => this.saveTiles(t));
@@ -82,9 +82,10 @@ export class GameStore {
     this.checkInitialized();
   }
 
-  protected setEntities(entities: EntityDTO[]) {
+  protected setEntities(entities: GameEntityDTO[]) {
     entities.forEach((entity) => {
       this.entities.set(entity.id, entity);
+
       const coordinate = coordinateToString(entity);
       const tileEntities = this.entitiesByTileIndex.get(coordinate) ?? new Set();
       tileEntities.add(entity.id);
@@ -94,11 +95,11 @@ export class GameStore {
     this.checkAlive();
   }
 
-  getEntityById(id: EntityDTO["id"]) {
+  getEntityById(id: GameEntityDTO["id"]) {
     return this.entities.get(id);
   }
 
-  getEntitiesByCoordinate(coordinate: Coordinate | { x: number; y: number }): EntityDTO[] {
+  getEntitiesByCoordinate(coordinate: Coordinate | { x: number; y: number }): GameEntityDTO[] {
     if (typeof coordinate !== "string") coordinate = this.coordsToId(coordinate.x, coordinate.y);
     const entities = this.entitiesByTileIndex.get(coordinate);
     if (!entities?.size) return [];
@@ -114,7 +115,7 @@ export class GameStore {
     return this.entities.values();
   }
 
-  protected setEntityById(id: string, entity: EntityDTO) {
+  protected setEntityById(id: string, entity: GameEntityDTO) {
     this.entities.set(id, entity);
   }
 
@@ -128,13 +129,20 @@ export class GameStore {
     if (!ant) throw new Error("Ant does not exist");
     if (ant.type !== "ant") throw new Error("This is not an ant");
     const delta = getDirectionDelta(direction);
+    const oldCoords = coordinateToString(ant);
     ant.x += delta.x;
     ant.y += delta.y;
-    this.setEntities([ant]);
+    const newCoords = coordinateToString(ant);
+    const oldTileIndex = this.entitiesByTileIndex.get(oldCoords);
+    if (oldTileIndex) oldTileIndex.delete(ant.id);
+    const newTileIndex = this.entitiesByTileIndex.get(newCoords) ?? new Set();
+    newTileIndex.add(ant.id);
+    this.entitiesByTileIndex.set(newCoords, newTileIndex);
+    this.bus.emit("rendererSelectAnt", ant);
   }
 
   getEntitiesOfPlayer(playerId: string = this.playerId) {
-    const result: EntityDTO[] = [];
+    const result: GameEntityDTO[] = [];
 
     for (const e of this.entities.values()) {
       if (e.playerId === playerId) {
