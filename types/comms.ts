@@ -6,7 +6,9 @@ import { EntityDTO } from "./entity.ts";
 
 interface ServerPlayerInfoEvent {
   type: "playerInfo";
-  body: PlayerDTO;
+  body: {
+    player: PlayerDTO;
+  };
 }
 
 interface ServerJoinEvent {

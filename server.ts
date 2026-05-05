@@ -4,12 +4,13 @@ import { AntDTO } from "./types/ant.ts";
 import { ClientMessage, ServerEvent, serverEvent } from "./types/comms.ts";
 import { Loglevel } from "./types/general.ts";
 import { PlayerDTO } from "./types/player.ts";
-import { TileDTO, TileType } from "./types/tile.ts";
+import { TileDTO } from "./types/tile.ts";
 import { generateUUID } from "./utils.ts";
 import { debounce } from "@std/async";
-import { testServerEntitiesEvent, testServerPlayerInfoEvent, testServerTilesEvent } from "./tests/payloads.ts";
+import { EntityDTO } from "./types/entity.ts";
 
 const loglevel: Loglevel = (Number(Deno.env.get("LOGLEVEL") || Loglevel.Warning)) as Loglevel;
+const isProd = Deno.args.includes("--prod");
 const port = 6969;
 const game = new Game();
 const playerSockets = new Map<string, WebSocket>();
@@ -19,12 +20,12 @@ const clients = new Set<WebSocket>();
 
 let files: Deno.bundle.Result | undefined;
 const buildFrontend = debounce(async (event?: Deno.FsEvent) => {
-  if (!Deno.bundle || typeof Deno.bundle !== "function") return;
+  if (!Deno.bundle || typeof Deno.bundle !== "function" || isProd) return;
   if (event) console.log("[%s] %s", event.kind, event.paths[0] + ": Building Frontend...");
   try {
     files = await Deno.bundle({
       entrypoints: ["./public/index.html"],
-      outputDir: "./public",
+      outputDir: "./memory",
       write: false,
       platform: "browser",
       minify: loglevel < 5,
@@ -41,9 +42,11 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
       let filepath = decodeURIComponent(url.pathname);
       if (filepath === "/" || filepath === "") filepath = "index.html";
       console.log("[HTTP] %s 200 %s", req.method, filepath);
-      //serve from memory
-      const memoryFile = files?.outputFiles?.find((f) => f.path === path.join(Deno.cwd(), "public", filepath));
-      if (memoryFile && memoryFile.contents) return new Response(memoryFile.contents);
+      if (!isProd) {
+        //serve from memory
+        const memoryFile = files?.outputFiles?.find((f) => f.path === path.join(Deno.cwd(), "memory", filepath));
+        if (memoryFile && memoryFile.contents) return new Response(memoryFile.contents);
+      }
       try {
         //else serve from ./build
         const file = await Deno.open(path.join(Deno.cwd(), "build", filepath), { read: true });
@@ -78,30 +81,35 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
       socket.send(serverEvent({
         type: "playerInfo",
         body: {
-          id: player.id,
+          player: new PlayerDTO(player),
         },
       }));
-      socket.send(serverEvent(testServerTilesEvent));
-      socket.send(serverEvent(testServerEntitiesEvent));
+      const playersHive = game.board.entities.get(player.hiveIds[0]);
+      if (playersHive) {
+        const vision = game.getTilesAndEntitesAroundEntity(playersHive);
+
+        socket.send(serverEvent({
+          type: "multiple",
+          body: [
+            {
+              type: "entities",
+              body: {
+                entities: vision.entities, //todo: use dto
+              },
+            },
+            {
+              type: "tiles",
+              body: {
+                tiles: vision.tiles.map((t) => new TileDTO(t)),
+              },
+            },
+          ],
+        }));
+      }
 
       playerSockets.set(player.id, socket);
       socketPlayers.set(socket, player.id);
       return;
-      // socket.send(serverEvent({
-      //   type: "multiple",
-      //   body: [
-      //     {
-      //       type: "playerInfo",
-      //       body: new PlayerDTO(player),
-      //     },
-      //     {
-      //       type: "tiles",
-      //       body: {
-      //         tiles: game.getVision(initialHive, 2).map((t) => new TileDTO(t)),
-      //       },
-      //     },
-      //   ],
-      // }));
     } catch (e: unknown) {
       socket.send(serverEvent({
         type: "error",
@@ -224,7 +232,7 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
 
 buildFrontend();
 
-if (loglevel >= Loglevel.Debug) {
+if (loglevel >= Loglevel.Debug && !isProd) {
   const watcher = Deno.watchFs(["./public/"]);
 
   for await (const event of watcher) {

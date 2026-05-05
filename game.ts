@@ -11,8 +11,8 @@ export class Game {
 
   constructor() {
     this.board = {
-      width: 200,
-      height: 200,
+      width: 20,
+      height: 20,
       tiles: generateTiles(200, 200),
       players: new Map(),
       entities: new Map(),
@@ -56,7 +56,9 @@ export class Game {
     const player = new Player(playerId);
     this.board.players.set(player.id, player);
 
-    this.addEntity(new Hive(playerId, position.x, position.y));
+    const hive = new Hive(playerId, position.x, position.y);
+    this.addEntity(hive);
+    player.hiveIds.push(hive.id);
     const ants = [new Ant(playerId, position.x, position.y), new Ant(playerId, position.x, position.y)];
     ants.forEach((a) => this.addEntity(a));
 
@@ -130,6 +132,26 @@ export class Game {
       }
     }
     return newTiles;
+  }
+
+  /**
+   * verison 2 of getVision
+   * @returns both tiles and entities
+   */
+  getTilesAndEntitesAroundEntity(entity: Entity, radius = 2) {
+    const result: { tiles: Tile[]; entities: Entity[] } = { tiles: [], entities: [] };
+    for (let dy = -radius; dy <= radius; dy++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        const x = entity.x + dx;
+        const y = entity.y + dy;
+        const tile = this.board.tiles[y][x];
+        const entities = this.board.entitiesByTileIndex.get(`${x},${y}`);
+
+        result.tiles.push(tile);
+        if (entities && entities.length) result.entities.push(...entities);
+      }
+    }
+    return result;
   }
 
   // removeVision(x: number, y: number, hiveId: number, radius: number = 2, antId?: number) {

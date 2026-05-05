@@ -1,8 +1,8 @@
 import { generateUUID } from "../utils.ts";
-import { Ant, AntDTO } from "./ant.ts";
-import { Hive, HiveDTO } from "./hive.ts";
+import { Hive } from "./hive.ts";
 
 export class Player {
+  hiveIds: Hive["id"][] = [];
   constructor(public id: string = generateUUID()) {
   }
 

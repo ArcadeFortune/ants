@@ -46,7 +46,7 @@ export class EventBus<E extends AppEvent = AppEvent> {
   }
 
   emit<K extends keyof E>(type: K, payload: E[K]) {
-    if (type === "criticalError") alert(payload);
+    if (type === "criticalError") this.panic(payload instanceof Error ? payload.message : JSON.stringify(payload));
     else if (payload instanceof Error) console.error("[Error] %s %o", type, payload);
     else console.debug("[New Event] %s %o", type, payload);
     this.listeners[type]?.forEach((l) => {
@@ -56,5 +56,10 @@ export class EventBus<E extends AppEvent = AppEvent> {
         console.error(e instanceof Error ? e.message : String(e));
       }
     });
+  }
+
+  panic(reason: string) {
+    document.getElementById("map")?.remove();
+    document.documentElement.append(reason);
   }
 }

@@ -11,6 +11,7 @@
   "tasks": {
     "dev": "deno --inspect -A --env --unstable-bundle --watch --watch-exclude='.*/**/' ./server.ts",
     "build": "deno bundle ./public/index.html --outdir=./build --platform=browser --minify",
+    "prod": "deno -A --env ./server.ts --prod",
     "test": "deno test -A"
   },
   "fmt": {
