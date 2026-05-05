@@ -135,8 +135,8 @@ export class GameStore {
     if (ant.type !== "ant") throw new Error("This is not an ant");
     const delta = getDirectionDelta(direction);
     const oldCoords = coordinateToString(ant);
-    ant.x = wrapDelta(ant.x + delta.x, this._mapWidth);
-    ant.y = wrapDelta(ant.y + delta.y, this._mapHeight);
+    ant.x = wrap(ant.x + delta.x, this._mapWidth);
+    ant.y = wrap(ant.y + delta.y, this._mapHeight);
     const newCoords = coordinateToString(ant);
     const oldTileIndex = this.entitiesByTileIndex.get(oldCoords);
     if (oldTileIndex) oldTileIndex.delete(ant.id);
