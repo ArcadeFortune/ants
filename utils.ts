@@ -1,5 +1,9 @@
 import { Direction, Position } from "./types/general.ts";
-import { Tile, TileType } from "./types/tile.ts";
+import { Coordinate, Tile } from "./types/tile.ts";
+
+export function coordinateToString(entity: { x: number; y: number }): Coordinate {
+  return `${entity.x},${entity.y}`;
+}
 
 export function getDirectionDelta(direction: Direction): Position {
   switch (direction) {
@@ -50,22 +54,6 @@ export function getNearbyTiles(board: Tile[][], antX: number, antY: number, radi
     }
   }
   return tiles;
-}
-
-export function findRandomEmptyPosition(board: Tile[][]): Position | null {
-  const width = board[0].length;
-  const height = board.length;
-  const empties: Position[] = [];
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      if (board[y][x].type === TileType.Empty) {
-        empties.push({ x, y });
-      }
-    }
-  }
-  if (empties.length === 0) return null;
-  const randomIndex = Math.floor(Math.random() * empties.length);
-  return empties[randomIndex];
 }
 
 export function generateUUID(): string {

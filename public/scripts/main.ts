@@ -8,13 +8,15 @@ function main() {
   const eventBus = new EventBus();
 
   const client = new Client(eventBus);
-  const game = new GameStore(eventBus);
-  const renderer = new Renderer(eventBus, game);
-  const controller = new Controller(eventBus, game);
+  const gameStore = new GameStore(eventBus);
+  const renderer = new Renderer(eventBus, gameStore);
+  const controller = new Controller(eventBus, gameStore);
 
-  client.connect();
-  renderer.render();
-  controller.mount();
+  client.init();
+  renderer.init();
+  controller.init();
+
+  window["ants"] = { client, gameStore, renderer, controller, eventBus };
 }
 
 document.addEventListener("DOMContentLoaded", main);

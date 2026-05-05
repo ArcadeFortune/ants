@@ -1,79 +1,116 @@
 import { AntDTO } from "../../types/ant.ts";
 import { EntityDTO } from "../../types/entity.ts";
-import { PlayerDTO } from "../../types/player.ts";
-import { TileDTO, TileType } from "../../types/tile.ts";
+import { Coordinate, TileDTO, TileType } from "../../types/tile.ts";
+import { coordinateToString } from "../../utils.ts";
 import { EventBus } from "./event-bus.ts";
 
 export class GameStore {
-  protected tiles = new Map<string, TileDTO>();
+  protected tiles = new Map<Coordinate, TileDTO>();
   protected entities = new Map<EntityDTO["id"], EntityDTO>();
-  protected playerId: string = "";
+  protected _playerId: string = "";
+  protected _isInitialized = false;
 
-  //indices
-  protected playerToAntIds = new Map<PlayerDTO["id"], Set<AntDTO["id"]>>();
+  protected entitiesByTileIndex = new Map<Coordinate, EntityDTO[]>();
 
   constructor(protected bus: EventBus) {
     bus.on("gameStoreTiles", (t) => this.saveTiles(t));
-    bus.on("gameStoreEntities", (entities) => this.storeEntities(entities));
-    bus.on("gameStoreOwnPlayerId", (playerId) => this.setPlayerId(playerId));
-  }
-
-  coordsToId(x: number, y: number) {
-    return `${x},${y}`;
-  }
-
-  tileToId(tile: TileDTO) {
-    return this.coordsToId(tile.x, tile.y);
-  }
-
-  protected saveTiles(tiles: TileDTO[]) {
-    if (this.tiles.size === 0) {
-      this.bus.emit("rendererMoveCamera", this.calculateCenter(tiles));
-    }
-    for (const tile of tiles) {
-      const id = this.tileToId(tile);
-      this.tiles.set(id, tile);
-    }
-  }
-
-  getPlayerId() {
-    return this.playerId;
-  }
-
-  protected setPlayerId(playerId: string) {
-    this.playerId = playerId;
-  }
-
-  protected storeEntities(entities: EntityDTO[]) {
-    entities.forEach((e) => {
-      this.entities.set(e.id, e);
+    bus.on("gameStoreEntities", (entities) => this.setEntities(entities));
+    bus.on("gameStoreOwnPlayerId", (playerId) => this.playerId = playerId);
+    bus.on("gameStoreInitialized", () => {
+      if (!this.checkAlive(false)) {
+        return this.bus.emit("criticalError", new Error(`No ants were given to the player ${this.playerId}`));
+      }
+      this.bus.emit("rendererMoveCamera", this.calculateCenter());
     });
   }
 
-  protected indexEntity(e: EntityDTO) {
-    const ownerId = e.playerId;
-    if (e.type === TileType.Ant) {
-      const ids = this.playerToAntIds.get(ownerId) ?? new Set();
-      ids.add(e.id);
-      this.playerToAntIds.set(ownerId, ids);
-    } else if (e.type === TileType.Hive && e.antIds.length && e.antIds.length > 0) {
-      const ids = this.playerToAntIds.get(ownerId) ?? new Set();
-      e.antIds.forEach((id) => {
-        ids.add(id);
-      });
-      this.playerToAntIds.set(ownerId, ids);
+  coordsToId(x: number, y: number): Coordinate {
+    return `${x},${y}`;
+  }
+
+  get isInitialized() {
+    return this._isInitialized;
+  }
+
+  get playerId() {
+    return this._playerId;
+  }
+
+  protected set playerId(playerId: string) {
+    this._playerId = playerId;
+    this.checkInitialized();
+  }
+
+  /**
+   * check if necessary values are set
+   * if the values are set for the first time, event 'gameStoreInitialized' is emitted
+   */
+  protected checkInitialized() {
+    if (this.isInitialized) return true;
+    else if (
+      this.tiles.size === 0 ||
+      this.entities.size === 0 ||
+      !this.playerId
+    ) return false;
+    else {
+      this._isInitialized = true;
+      this.bus.emit("gameStoreInitialized", undefined);
+      return true;
     }
   }
 
-  getEntityById(id: string) {
-    this.entities.get(id);
+  /**
+   * check if the player has ants left in the game
+   * if not, sends an gameOver event
+   */
+  protected checkAlive(emitEvent = true) {
+    console.log("checking if alive...");
+    for (const entity of this.entities.values()) {
+      if (entity.type === "ant" && entity.playerId === this.playerId) return true;
+    }
+    emitEvent && this.bus.emit("gameOver", undefined);
+    return false;
+  }
+
+  protected saveTiles(tiles: TileDTO[]) {
+    for (const tile of tiles) {
+      const id = this.coordsToId(tile.x, tile.y);
+      this.tiles.set(id, tile);
+    }
+    this.checkInitialized();
+  }
+
+  protected setEntities(entities: EntityDTO[]) {
+    entities.forEach((e) => {
+      this.entities.set(e.id, e);
+
+      const coordinate = coordinateToString(e);
+      const entities = this.entitiesByTileIndex.get(coordinate) ?? [];
+      entities.push(e);
+      this.entitiesByTileIndex.set(coordinate, entities);
+    });
+    this.checkInitialized();
+    this.checkAlive();
+  }
+
+  getEntityById(id: EntityDTO["id"]) {
+    return this.entities.get(id);
+  }
+
+  getEntitiesByCoordinate(coordinate: Coordinate | { x: number; y: number }) {
+    if (typeof coordinate !== "string") coordinate = this.coordsToId(coordinate.x, coordinate.y);
+    return this.entitiesByTileIndex.get(coordinate);
+  }
+
+  getEntities() {
+    return this.entities.values();
   }
 
   protected setEntityById(id: string, entity: EntityDTO) {
     this.entities.set(id, entity);
   }
 
-  getEntitiesOfPlayer(playerId: string) {
+  getEntitiesOfPlayer(playerId: string = this.playerId) {
     const result: EntityDTO[] = [];
 
     for (const e of this.entities.values()) {
@@ -85,21 +122,22 @@ export class GameStore {
     return result;
   }
 
-  getAntIdsOfPlayer(playerId: string) {
-    return this.playerToAntIds.get(playerId) ?? new Set();
+  /**
+   * loops over all entities to find the ones belonging to the player & are ants
+   */
+  getAntsOfPlayer(playerId: string = this.playerId) {
+    const result: AntDTO[] = [];
+
+    for (const e of this.entities.values()) {
+      if (e.type === "ant" && e.playerId === playerId) {
+        result.push(e);
+      }
+    }
+
+    return result;
   }
 
-  getAntsOfPlayer(playerId: string) {
-    const antIds = this.playerToAntIds.get(playerId) ?? new Set();
-    const ants: AntDTO[] = [];
-    antIds.forEach((id) => {
-      const entity = this.entities.get(id);
-      if (entity && entity.type === TileType.Ant) ants.push(entity);
-    });
-    return ants;
-  }
-
-  protected calculateCenter(tiles: TileDTO[]) {
+  protected calculateCenter(tiles = [...this.tiles.values()]) {
     let xSum = 0;
     let ySum = 0;
     tiles.forEach((tile) => {

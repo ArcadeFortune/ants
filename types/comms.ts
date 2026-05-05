@@ -2,10 +2,13 @@ import { TileDTO } from "./tile.ts";
 import { AntDTO } from "./ant.ts";
 import { PlayerDTO } from "./player.ts";
 import { Direction } from "./general.ts";
+import { EntityDTO } from "./entity.ts";
 
 interface ServerPlayerInfoEvent {
   type: "playerInfo";
-  body: PlayerDTO;
+  body: {
+    player: PlayerDTO;
+  };
 }
 
 interface ServerJoinEvent {
@@ -29,6 +32,13 @@ interface ServerTilesEvent {
   };
 }
 
+interface ServerEntitiesEvent {
+  type: "entities";
+  body: {
+    entities: EntityDTO[];
+  };
+}
+
 interface ServerOwnAntMovedEvent {
   type: "yourAntMoved";
   body: {
@@ -46,30 +56,42 @@ interface ServerErrorEvent {
 
 interface ServerMultipleEvents {
   type: "multiple";
-  body: Exclude<ServerEvent, ServerMultipleEvents>[];
+  body: BaseServerEvent[];
 }
 
-export type ServerEvent = ServerMultipleEvents | ServerPlayerInfoEvent | ServerJoinEvent | ServerLeaveEvent | ServerTilesEvent | ServerOwnAntMovedEvent | ServerErrorEvent;
+type BaseServerEvent = ServerPlayerInfoEvent | ServerJoinEvent | ServerLeaveEvent | ServerTilesEvent | ServerEntitiesEvent | ServerOwnAntMovedEvent | ServerErrorEvent;
+
+export type ServerEvent = BaseServerEvent | ServerMultipleEvents;
 
 export function serverEvent(e: ServerEvent): string {
+  // console.log("[WS] SEND_EVENT 200 %s", e.type);
   return JSON.stringify(e);
 }
 
 interface ClientPingMessage {
   type: "ping";
+  body: void;
 }
 
 interface ClientWhoAmIMessage {
   type: "whoami";
+  body: void;
 }
 
 interface ClientMoveMessage {
   type: "move";
-  antId: string;
-  direction: Direction;
+  body: {
+    antId: string;
+    direction: Direction;
+  };
 }
 
 export type ClientMessage = ClientPingMessage | ClientWhoAmIMessage | ClientMoveMessage;
+
+export function clientMessage(e: ClientMessage): string {
+  console.debug("[Client Message] %s %o", e.type, e);
+  return JSON.stringify(e);
+}
 // export interface ServerMessage {
 //   type: "update";
 //   ants: {

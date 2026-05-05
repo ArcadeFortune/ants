@@ -1,6 +1,10 @@
+import { AntDTO } from "../../types/ant.ts";
+import { EntityDTO } from "../../types/entity.ts";
+import { HiveDTO } from "../../types/hive.ts";
 import { TileDTO, TileType } from "../../types/tile.ts";
 import { EventBus } from "./event-bus.ts";
 import { GameStore } from "./game-store.ts";
+import { Sprite } from "./sprite-manager.ts";
 
 export interface SnapshotTiles {
   type: TileType;
@@ -23,9 +27,12 @@ export class Renderer {
   private movingCameraDuration = 0.4;
   private isMovingCamera = false;
 
-  antSprite = new Image();
+  antSprite = new Sprite(2);
+  hiveSprite = new Sprite(1);
   spriteSize = 32;
   animationTime = 0;
+
+  selectedTile: { x: number; y: number } | null = null;
 
   constructor(protected bus: EventBus, protected gameStore: GameStore) {
     const canvas = document.getElementById("map");
@@ -35,48 +42,76 @@ export class Renderer {
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Unable to get 2d render engine");
     ctx.imageSmoothingEnabled = false;
+    ctx.font = "25px Arial";
     this.ctx = ctx;
 
-    this.antSprite.src = "ant.png";
+    this.antSprite.load("/sprites/ant/ant.png");
+    this.hiveSprite.load("sprites/hive/hive.png");
 
     bus.on("rendererMoveCamera", (pos) => {
       this.moveCamera(pos.x, pos.y);
     });
+
+    bus.on("rendererSelectAnt", (ant) => {
+      this.selectAnt(ant);
+    });
   }
 
-  render() {
+  init() {
     requestAnimationFrame((t) => this.loop(t));
   }
 
   private loop(currentTime: number, lastTime: number = 0) {
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     const deltaTime = (currentTime - lastTime) / 1000; //seconds
     this.animationTime += deltaTime;
+
     this.updateCamera(deltaTime);
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
-    const startTileX = Math.floor(this.cameraX) - this.HALF_VIEW_SIZE;
-    const startTileY = Math.floor(this.cameraY) - this.HALF_VIEW_SIZE;
-    const offsetX = (this.cameraX - Math.floor(this.cameraX)) * this.TILE_SIZE;
-    const offsetY = (this.cameraY - Math.floor(this.cameraY)) * this.TILE_SIZE;
-
-    for (let y = 0; y <= this.VIEW_SIZE; y++) {
-      for (let x = 0; x <= this.VIEW_SIZE; x++) {
-        const tile = this.gameStore.getTile(startTileX + x, startTileY + y);
-
-        const canvasX = x * this.TILE_SIZE - offsetX;
-        const canvasY = y * this.TILE_SIZE - offsetY;
-        this.drawTile(tile, canvasX, canvasY);
-      }
-    }
+    this.drawTiles();
+    this.drawSelection();
 
     lastTime = currentTime;
-
     requestAnimationFrame((c) => this.loop(c, lastTime));
+  }
+
+  drawEntities() {
+    const offsetX = (this.cameraX - Math.floor(this.cameraX)) * this.TILE_SIZE;
+    const offsetY = (this.cameraY - Math.floor(this.cameraY)) * this.TILE_SIZE;
+    const cameraTopLeftX = Math.floor(this.cameraX) - this.HALF_VIEW_SIZE;
+    const cameraTopLeftY = Math.floor(this.cameraY) - this.HALF_VIEW_SIZE;
+
+    for (const entity of this.gameStore.getEntities()) {
+      const canvasX = (entity.x - cameraTopLeftX) * this.TILE_SIZE - offsetX;
+      const canvasY = (entity.y - cameraTopLeftY) * this.TILE_SIZE - offsetY;
+      this.drawEntity(entity, canvasX, canvasY);
+    }
+  }
+
+  drawTiles() {
+    const baseTileX = Math.floor(this.cameraX);
+    const baseTileY = Math.floor(this.cameraY);
+    const topLeftTileX = baseTileX - this.HALF_VIEW_SIZE;
+    const topLeftTileY = baseTileY - this.HALF_VIEW_SIZE;
+    const offsetX = (this.cameraX - baseTileX) * this.TILE_SIZE;
+    const offsetY = (this.cameraY - baseTileY) * this.TILE_SIZE;
+
+    for (let i = 0; i <= this.VIEW_SIZE; i++) {
+      for (let j = 0; j <= this.VIEW_SIZE; j++) {
+        const x = topLeftTileX + j;
+        const y = topLeftTileY + i;
+        const tile = this.gameStore.getTile(x, y);
+        const canvasX = j * this.TILE_SIZE - offsetX;
+        const canvasY = i * this.TILE_SIZE - offsetY;
+
+        this.drawTile(tile, canvasX, canvasY);
+        this.drawTileEntities(tile, canvasX, canvasY);
+      }
+    }
   }
 
   drawTile(tile: TileDTO, canvasX: number, canvasY: number) {
     switch (tile?.type) {
-      case "empty":
+      case "ground":
         this.ctx.fillStyle = "#eee";
         break;
       case "wall":
@@ -98,24 +133,85 @@ export class Renderer {
     this.ctx.fillRect(canvasX, canvasY, this.TILE_SIZE, this.TILE_SIZE);
     this.ctx.strokeStyle = "#999"; //grid
     this.ctx.strokeRect(canvasX, canvasY, this.TILE_SIZE, this.TILE_SIZE);
+  }
 
-    if (tile.antIds && tile.antIds.length) {
-      this.drawSprite(this.antSprite, canvasX, canvasY, this.TILE_SIZE / 2);
+  drawTileEntities(tile: TileDTO, canvasX: number, canvasY: number) {
+    const entities = this.gameStore.getEntitiesByCoordinate(tile);
+    if (!entities?.length) return;
+
+    const hive = entities.find((e) => e.type === "hive"); // assume max
+    const ants = entities.filter((e) => e.type === "ant");
+
+    if (hive) {
+      this.drawHiveWithAnts(hive, ants, canvasX, canvasY);
+      return;
+    } else if (!hive && ants.length === 1) {
+      this.drawEntity(ants[0], canvasX, canvasY);
+    } else if (!hive && ants.length > 1) {
+      this.drawEntity(ants[0], canvasX, canvasY);
+      this.drawText(ants.length.toString(), canvasX + this.TILE_SIZE / 2, canvasY + this.TILE_SIZE - 4);
     }
   }
 
-  getSpriteIndex(frame: number) {
-    const col = frame % 2;
-    const row = Math.floor(frame / 2);
-    return { x: col, y: row };
-  }
-  drawSprite(img: HTMLImageElement, canvasX: number, canvasY: number, desiredSize: number, frame: number = Math.floor(this.animationTime % 6)) {
-    this.ctx.drawImage(img, this.getSpriteIndex(frame).x * this.spriteSize, this.getSpriteIndex(frame).y * this.spriteSize, this.spriteSize, this.spriteSize, canvasX, canvasY, desiredSize, desiredSize);
+  /**
+   * draws hive and smaller ants with a counter if any are inside
+   */
+  private drawHiveWithAnts(hive: HiveDTO, ants: AntDTO[], x: number, y: number) {
+    this.drawEntity(hive, x, y);
+    if (ants.length === 0) return;
+
+    const smallerSize = this.TILE_SIZE / 2;
+    this.drawEntity(ants[0], x, y + this.TILE_SIZE - smallerSize, smallerSize);
+    this.drawText(ants.length.toString(), x + smallerSize, y + this.TILE_SIZE - 4);
   }
 
-  setCamera(x: number, y: number) {
-    this.cameraX = x;
-    this.cameraY = y;
+  drawEntity(entity: EntityDTO, canvasX: number, canvasY: number, desiredSize = this.TILE_SIZE) {
+    switch (entity.type) {
+      case "ant": {
+        const antFrame = this.antSprite.getFrame(this.animationTime);
+        if (!antFrame) break;
+        this.ctx.drawImage(antFrame.image, antFrame.x, antFrame.y, this.spriteSize, this.spriteSize, canvasX, canvasY, desiredSize, desiredSize);
+        break;
+      }
+      case "hive": {
+        const hiveFrame = this.hiveSprite.getFrame(this.animationTime);
+        if (!hiveFrame) break;
+        this.ctx.drawImage(hiveFrame.image, hiveFrame.x, hiveFrame.y, this.spriteSize, this.spriteSize, canvasX, canvasY, desiredSize, desiredSize);
+        break;
+      }
+    }
+  }
+
+  drawSelection() {
+    if (!this.selectedTile) return;
+    const baseTileX = Math.floor(this.cameraX);
+    const baseTileY = Math.floor(this.cameraY);
+    const topLeftTileX = baseTileX - this.HALF_VIEW_SIZE;
+    const topLeftTileY = baseTileY - this.HALF_VIEW_SIZE;
+    const cameraOffsetX = (this.cameraX - baseTileX) * this.TILE_SIZE;
+    const cameraOffsetY = (this.cameraY - baseTileY) * this.TILE_SIZE;
+    const offsetX = this.selectedTile.x - topLeftTileX;
+    const offsetY = this.selectedTile.y - topLeftTileY;
+
+    const canvasX = offsetX * this.TILE_SIZE - cameraOffsetX;
+    const canvasY = offsetY * this.TILE_SIZE - cameraOffsetY;
+
+    const prev = this.ctx.lineWidth;
+    if (Math.floor(this.animationTime % 2)) {
+      this.ctx.lineWidth = 3;
+    } else {
+      this.ctx.lineWidth = 2;
+    }
+    this.ctx.strokeStyle = "#9c3400";
+    this.ctx.strokeRect(canvasX, canvasY, this.TILE_SIZE, this.TILE_SIZE);
+    this.ctx.lineWidth = prev;
+  }
+
+  drawText(text: string, x: number, y: number, color: string = "black") {
+    const prevFillStyle = this.ctx.fillStyle;
+    this.ctx.fillStyle = color;
+    this.ctx.fillText(text, x, y);
+    this.ctx.fillStyle = prevFillStyle;
   }
 
   moveCamera(x: number, y: number) {
@@ -125,9 +221,15 @@ export class Renderer {
     this.isMovingCamera = true;
   }
 
+  selectAnt(ant: AntDTO) {
+    this.moveCamera(ant.x, ant.y);
+    this.selectedTile = { x: ant.x, y: ant.y };
+  }
+
   private lerp(a: number, b: number, t: number) {
     return a + (b - a) * t;
   }
+
   private updateCamera(deltaTime: number) {
     if (!this.isMovingCamera) return;
 

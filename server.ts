@@ -4,12 +4,14 @@ import { AntDTO } from "./types/ant.ts";
 import { ClientMessage, ServerEvent, serverEvent } from "./types/comms.ts";
 import { Loglevel } from "./types/general.ts";
 import { PlayerDTO } from "./types/player.ts";
-import { TileDTO } from "./types/tile.ts";
+import { TileDTO, TileType } from "./types/tile.ts";
 import { generateUUID } from "./utils.ts";
 import { debounce } from "@std/async";
+import { EntityDTO } from "./types/entity.ts";
 
-const loglevel: Loglevel = (Number(Deno.env.get("LOGLEVEL")) ?? Loglevel.Warning) as Loglevel;
-const port = 8080;
+const loglevel: Loglevel = (Number(Deno.env.get("LOGLEVEL") || Loglevel.Warning)) as Loglevel;
+const isProd = Deno.args.includes("--prod");
+const port = 6969;
 const game = new Game();
 const playerSockets = new Map<string, WebSocket>();
 const socketPlayers = new Map<WebSocket, string>();
@@ -18,11 +20,12 @@ const clients = new Set<WebSocket>();
 
 let files: Deno.bundle.Result | undefined;
 const buildFrontend = debounce(async (event?: Deno.FsEvent) => {
+  if (!Deno.bundle || typeof Deno.bundle !== "function" || isProd) return;
   if (event) console.log("[%s] %s", event.kind, event.paths[0] + ": Building Frontend...");
   try {
     files = await Deno.bundle({
       entrypoints: ["./public/index.html"],
-      outputDir: "./public",
+      outputDir: "./memory",
       write: false,
       platform: "browser",
       minify: loglevel < 5,
@@ -38,59 +41,75 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
       const url = new URL(req.url);
       let filepath = decodeURIComponent(url.pathname);
       if (filepath === "/" || filepath === "") filepath = "index.html";
-      filepath = path.join(Deno.cwd(), "public", filepath);
-
-      //serve from memory
-      const memoryFile = files?.outputFiles?.find((f) => f.path === filepath);
-      if (memoryFile && memoryFile.contents) return new Response(memoryFile.contents);
-      //else serve from ./public
-      const file = await Deno.open(filepath, { read: true });
-      return new Response(file.readable);
+      console.log("[HTTP] %s 200 %s", req.method, filepath);
+      if (!isProd) {
+        //serve from memory
+        const memoryFile = files?.outputFiles?.find((f) => f.path === path.join(Deno.cwd(), "memory", filepath));
+        if (memoryFile && memoryFile.contents) return new Response(memoryFile.contents);
+      }
+      try {
+        //else serve from ./build
+        const file = await Deno.open(path.join(Deno.cwd(), "build", filepath), { read: true });
+        return new Response(file.readable);
+      } catch (_e: unknown) {
+        //else serve from ./public
+        const file = await Deno.open(path.join(Deno.cwd(), "public", filepath), { read: true });
+        return new Response(file.readable);
+      }
     } catch (e) {
-      console.error("Error finding file: ", e instanceof Error ? e.message : String(e));
+      console.warn("[HTTP] ERROR 404 File not found, %s", e instanceof Error ? e.message : String(e));
       return new Response("Not found", { status: 404 });
     }
   }
   const { socket, response } = Deno.upgradeWebSocket(req);
 
   socket.addEventListener("open", () => {
-    // Accept new connections
-    // assign new PlayerSession
-    // send InitState todo: one special server message response "ServerPlayerInitEvent"
     try {
-      const playerId = generateUUID();
-      const player = game.addPlayer(playerId);
-      const initialHive = player.hives[0];
-      if (!initialHive) return socket.send(serverEvent({ type: "error", body: { code: 500, message: "Something went wrong with the hive creation..." } }));
-      playerSockets.set(playerId, socket);
-      socketPlayers.set(socket, playerId);
-      console.log(`Player ${playerId} connected`);
+      const player = game.addPlayer(generateUUID());
+
+      console.log("[GAME] ADD_PLAYER 200 %s", player.id);
 
       clients.forEach((s) =>
         s.send(serverEvent({
           type: "join",
           body: {
-            hiveId: initialHive.id,
+            hiveId: player.id,
           },
         }))
       );
       clients.add(socket);
-
       socket.send(serverEvent({
-        type: "multiple",
-        body: [
-          {
-            type: "playerInfo",
-            body: new PlayerDTO(player),
-          },
-          {
-            type: "tiles",
-            body: {
-              tiles: game.getVision(initialHive, 2).map((t) => new TileDTO(t)),
-            },
-          },
-        ],
+        type: "playerInfo",
+        body: {
+          player: new PlayerDTO(player)
+        },
       }));
+      const playersHive = game.board.entities.get(player.hiveIds[0]);
+      if (playersHive) {
+        const vision = game.getTilesAndEntitesAroundEntity(playersHive);
+
+        socket.send(serverEvent({
+          type: "multiple",
+          body: [
+            {
+              type: "entities",
+              body: {
+                entities: vision.entities, //todo: use dto
+              },
+            },
+            {
+              type: "tiles",
+              body: {
+                tiles: vision.tiles.map((t) => new TileDTO(t)),
+              },
+            },
+          ],
+        }));
+      }
+
+      playerSockets.set(player.id, socket);
+      socketPlayers.set(socket, player.id);
+      return;
     } catch (e: unknown) {
       socket.send(serverEvent({
         type: "error",
@@ -99,6 +118,7 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
           message: e instanceof Error ? e.message : String(e),
         },
       }));
+      socket.close();
     }
   });
 
@@ -117,10 +137,10 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
         case "move":
           {
             //TODO; Broadcast per-player vision/updates (only what they should see)
-            console.log(`Client wants to move ${message.antId} to ${message.direction}`);
+            console.log(`Client wants to move ${message.body.antId} to ${message.body.direction}`);
             const player = socketPlayers.get(socket);
             if (!player) throw new Error("Player not found.");
-            const ant = game.moveAnt(player, message.antId, message.direction);
+            const ant = game.moveAnt(player, message.body.antId, message.body.direction);
             socket.send(serverEvent({
               type: "multiple",
               body: [
@@ -158,8 +178,9 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
     }
   });
 
-  socket.addEventListener("close", (_event) => {
+  socket.addEventListener("close", (e) => {
     try {
+      console.log("[WS] CLOSE %s %s", e.code, e.reason);
       // Handle disconnects (mark player as offline; possibly reassign hive ownership or keep until timeout)
       const playerId = socketPlayers.get(socket);
       if (!playerId) return;
@@ -187,6 +208,7 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
   });
 
   socket.addEventListener("error", (_event) => {
+    console.error("[WS] ERROR 500 Socket had an error.");
     // Handle disconnects (mark player as offline; possibly reassign hive ownership or keep until timeout)
     const playerId = socketPlayers.get(socket);
     if (!playerId) return;
@@ -204,13 +226,14 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
     game.removePlayer(playerId);
   });
 
+  console.log("[WS] CONNECT 200 %s", req.url);
   return response;
 });
 
 buildFrontend();
 
-if (loglevel >= Loglevel.Debug) {
-  const watcher = Deno.watchFs(["./public"]);
+if (loglevel >= Loglevel.Debug && !isProd) {
+  const watcher = Deno.watchFs(["./public/"]);
 
   for await (const event of watcher) {
     buildFrontend(event);
