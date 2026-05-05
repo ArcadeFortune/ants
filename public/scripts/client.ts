@@ -69,6 +69,7 @@ export class Client {
       case "playerInfo": {
         const playerId = message.body.player.id;
         this.bus.emit("gameStoreOwnPlayerId", playerId);
+        this.bus.emit("gameStoreMapInfo", message.body.map);
         break;
       }
       default: {

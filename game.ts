@@ -4,7 +4,7 @@ import { Entity } from "./types/entity.ts";
 import { Player } from "./types/player.ts";
 import { Ant } from "./types/ant.ts";
 import { Hive } from "./types/hive.ts";
-import { coordinateToString, getDirectionDelta } from "./utils.ts";
+import { coordinateToString, getDirectionDelta, wrap } from "./utils.ts";
 
 export class Game {
   board: Board;
@@ -142,8 +142,9 @@ export class Game {
     const result: { tiles: Tile[]; entities: Entity[] } = { tiles: [], entities: [] };
     for (let dy = -radius; dy <= radius; dy++) {
       for (let dx = -radius; dx <= radius; dx++) {
-        const x = entity.x + dx;
-        const y = entity.y + dy;
+        const x = wrap(entity.x + dx, this.board.width);
+        const y = wrap(entity.y + dy, this.board.height);
+
         const tile = this.board.tiles[y][x];
         const entities = this.board.entitiesByTileIndex.get(`${x},${y}`);
 
@@ -183,9 +184,8 @@ export class Game {
     // if (now - ant.lastMove < 2000) return false; // cooldown
 
     const delta = getDirectionDelta(direction);
-
-    const newX = ant.x + delta.x;
-    const newY = ant.y + delta.y;
+    const newX = wrap(ant.x + delta.x, this.board.width);
+    const newY = wrap(ant.y + delta.y, this.board.height);
 
     if (newX < 0 || newX >= this.board.width || newY < 0 || newY >= this.board.height) throw new Error("Cannot walk outside the map."); //todo: teleport to other side
 

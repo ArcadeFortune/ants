@@ -78,6 +78,10 @@ Deno.serve({ port, onListen: () => console.log(`Server listening on http://local
         type: "playerInfo",
         body: {
           player: new PlayerDTO(player),
+          map: {
+            width: game.board.width,
+            height: game.board.height,
+          },
         },
       }));
       const playersHive = game.board.entities.get(player.hiveIds[0]);

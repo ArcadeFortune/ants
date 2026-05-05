@@ -1,13 +1,17 @@
 import { TileDTO } from "./tile.ts";
-import { Ant, AntDTO } from "./ant.ts";
+import { AntDTO } from "./ant.ts";
 import { PlayerDTO } from "./player.ts";
 import { Direction } from "./general.ts";
-import { EntityDTO } from "./entity.ts";
+import { GameEntityDTO } from "./entity.ts";
 
 interface ServerPlayerInfoEvent {
   type: "playerInfo";
   body: {
     player: PlayerDTO;
+    map: {
+      width: number;
+      height: number;
+    };
   };
 }
 
@@ -35,7 +39,7 @@ interface ServerTilesEvent {
 interface ServerEntitiesEvent {
   type: "entities";
   body: {
-    entities: EntityDTO[];
+    entities: GameEntityDTO[];
   };
 }
 

@@ -53,6 +53,7 @@ export class Renderer {
     });
 
     bus.on("rendererSelectAnt", (ant) => {
+      if (ant.type !== "ant") throw new Error("Entity is not selectable");
       this.selectAnt(ant);
     });
   }
@@ -72,19 +73,6 @@ export class Renderer {
 
     lastTime = currentTime;
     requestAnimationFrame((c) => this.loop(c, lastTime));
-  }
-
-  drawEntities() {
-    const offsetX = (this.cameraX - Math.floor(this.cameraX)) * this.TILE_SIZE;
-    const offsetY = (this.cameraY - Math.floor(this.cameraY)) * this.TILE_SIZE;
-    const cameraTopLeftX = Math.floor(this.cameraX) - this.HALF_VIEW_SIZE;
-    const cameraTopLeftY = Math.floor(this.cameraY) - this.HALF_VIEW_SIZE;
-
-    for (const entity of this.gameStore.getEntities()) {
-      const canvasX = (entity.x - cameraTopLeftX) * this.TILE_SIZE - offsetX;
-      const canvasY = (entity.y - cameraTopLeftY) * this.TILE_SIZE - offsetY;
-      this.drawEntity(entity, canvasX, canvasY);
-    }
   }
 
   drawTiles() {

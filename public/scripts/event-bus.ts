@@ -10,6 +10,7 @@ export interface AppEvent {
   gameStoreTiles: TileDTO[];
   gameStoreEntities: GameEntityDTO[];
   gameStoreOwnPlayerId: string;
+  gameStoreMapInfo: { width: number; height: number };
   gameStoreInitialized: void;
   gameStoreAntMoved: { antId: AntDTO["id"]; direction: Direction };
   gameOver: void;

@@ -2,7 +2,7 @@ import { AntDTO } from "../../types/ant.ts";
 import { GameEntityDTO } from "../../types/entity.ts";
 import { Direction } from "../../types/general.ts";
 import { Coordinate, TileDTO, TileType } from "../../types/tile.ts";
-import { coordinateToString, getDirectionDelta } from "../../utils.ts";
+import { coordinateToString, getDirectionDelta, wrap, wrapDelta } from "../../utils.ts";
 import { EventBus } from "./event-bus.ts";
 
 export class GameStore {
@@ -10,6 +10,8 @@ export class GameStore {
   protected entities = new Map<GameEntityDTO["id"], GameEntityDTO>();
   protected _playerId: string = "";
   protected _isInitialized = false;
+  protected _mapWidth = 0;
+  protected _mapHeight = 0;
 
   protected entitiesByTileIndex = new Map<Coordinate, Set<GameEntityDTO["id"]>>();
 
@@ -17,6 +19,10 @@ export class GameStore {
     bus.on("gameStoreTiles", (t) => this.saveTiles(t));
     bus.on("gameStoreEntities", (entities) => this.setEntities(entities));
     bus.on("gameStoreOwnPlayerId", (playerId) => this.playerId = playerId);
+    bus.on("gameStoreMapInfo", (info) => {
+      this._mapHeight = info.height;
+      this._mapWidth = info.width;
+    });
     bus.on("gameStoreAntMoved", (payload) => this.moveAnt(payload.antId, payload.direction));
     bus.on("gameStoreInitialized", () => {
       if (!this.checkAlive(false)) {
@@ -124,14 +130,13 @@ export class GameStore {
    * called from server event, meaning any ant can be moved with this function
    */
   protected moveAnt(antId: AntDTO["id"], direction: Direction) {
-    console.log("moving ant");
     const ant = this.entities.get(antId);
     if (!ant) throw new Error("Ant does not exist");
     if (ant.type !== "ant") throw new Error("This is not an ant");
     const delta = getDirectionDelta(direction);
     const oldCoords = coordinateToString(ant);
-    ant.x += delta.x;
-    ant.y += delta.y;
+    ant.x = wrapDelta(ant.x + delta.x, this._mapWidth);
+    ant.y = wrapDelta(ant.y + delta.y, this._mapHeight);
     const newCoords = coordinateToString(ant);
     const oldTileIndex = this.entitiesByTileIndex.get(oldCoords);
     if (oldTileIndex) oldTileIndex.delete(ant.id);
@@ -179,6 +184,8 @@ export class GameStore {
   }
 
   getTile(x: number, y: number) {
-    return this.tiles.get(this.coordsToId(x, y)) ?? { type: TileType.Unknown, x, y };
+    const wx = wrap(x, this._mapWidth);
+    const wy = wrap(y, this._mapHeight);
+    return this.tiles.get(this.coordsToId(wx, wy)) ?? { type: TileType.Unknown, x: wx, y: wy };
   }
 }

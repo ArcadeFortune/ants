@@ -75,3 +75,16 @@ export function toEntityDTO(entity: Entity): EntityDTO {
       return new EntityDTO(entity);
   }
 }
+
+/**
+ * used to wrap around the map for an infinite effect
+ */
+export function wrap(value: number, boardSize: number) {
+  return (value % boardSize + boardSize) % boardSize;
+}
+
+export function wrapDelta(delta: number, boardSize: number) {
+  if (delta > boardSize / 2) return delta - boardSize;
+  if (delta < -boardSize / 2) return delta + boardSize;
+  return delta;
+}
